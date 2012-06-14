@@ -1,8 +1,8 @@
 package com.github.rpository;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -27,19 +27,26 @@ import java.util.Map;
  * For maximal portability, the DESCRIPTION file should be written entirely in ASCII — 
  * if this is not possible it must contain an ‘Encoding’ field (see below).
  */
-public class PackageDescriptionFile {
+public class PackageDescription {
 
 	private final HashMap<String, String> entries = new HashMap<String, String>();
 	private String enc = "US-ASCII";
 	private String repr = null;
 
-	public PackageDescriptionFile() {
-
+	public PackageDescription(String pkg, String version, String license, String descr, String title, String author,
+			String maintainer) {
+		set("Package", pkg);
+		set("Version", version);
+		set("License", license);
+		set("Description", descr);
+		set("Title", title);
+		set("Author", author);
+		set("Maintainer", maintainer);
 	};
 
-	public PackageDescriptionFile(InputStream is) throws IOException {
+	public PackageDescription(InputStream is) throws IOException {
 		BufferedReader br = new BufferedReader(new InputStreamReader(is, enc));
-		String l = null, lastL = null;
+		String l = null;
 		ArrayList<String> lines = new ArrayList<String>();
 
 		while ((l = br.readLine()) != null) {
@@ -63,7 +70,6 @@ public class PackageDescriptionFile {
 			} else {
 				lines.add(l);
 			}
-			lastL = l;
 		}
 
 		for (String ln : lines) {
@@ -104,28 +110,32 @@ public class PackageDescriptionFile {
 		return repr;
 	}
 
+	public File toTempFile() throws IOException {
+		File f = File.createTempFile("Rpository_DESCRIPTION", null);
+		f.deleteOnExit();
+		FileWriter fw = new FileWriter(f);
+
+		fw.write(toString());
+		fw.close();
+		return f;
+	}
+
 	private String reEncode(String in) throws UnsupportedEncodingException {
 		return new String(in.getBytes(), enc);
 	}
 
-	public static void main(String[] argv) throws IOException {
-		PackageDescriptionFile df = new PackageDescriptionFile();
-		FileOutputStream f = new FileOutputStream(argv[0], false);
+	// public static void main(String[] argv) throws IOException {
+	// PackageDescriptionFile df = new PackageDescriptionFile();
+	// FileOutputStream f = new FileOutputStream(argv[0], false);
+	//
 
-		df.set("Package", "foo");
-		df.set("Version", "1.0");
-		df.set("License", "GPL-3");
-		df.set("Description", "This package is useless. Dont install it.");
-		df.set("Title", "Foo, a useless package");
-		df.set("Author", "John Doe");
-		df.set("Maintainer", "Jane Doe");
-		f.write(df.toString().getBytes());
-		f.close();
-
-		df = new PackageDescriptionFile(new FileInputStream(argv[1]));
-		df.set("Package", df.get("Package") + "-");
-		f = new FileOutputStream(argv[1], false);
-		f.write(df.toString().getBytes());
-		f.close();
-	}
+	// f.write(df.toString().getBytes());
+	// f.close();
+	//
+	// df = new PackageDescriptionFile(new FileInputStream(argv[1]));
+	// df.set("Package", df.get("Package") + "-");
+	// f = new FileOutputStream(argv[1], false);
+	// f.write(df.toString().getBytes());
+	// f.close();
+	// }
 }
