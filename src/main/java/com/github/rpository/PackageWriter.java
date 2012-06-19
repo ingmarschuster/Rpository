@@ -57,6 +57,14 @@ public class PackageWriter {
 		appendFile(in, "inst/" + entryName.trim());
 	}
 
+	public void appendPreprint(File in, String entryName) throws IOException {
+		appendFile(in, "inst/preprint/" + entryName.trim());
+	}
+
+	public void appendLegacySourceData(File in, String entryName) throws IOException {
+		appendFile(in, "inst/src_and_data/" + entryName.trim());
+	}
+
 	// public void appendData(File in, String entryName) throws IOException {
 	// appendFile(in, "inst/data/" + entryName.trim());
 	// }

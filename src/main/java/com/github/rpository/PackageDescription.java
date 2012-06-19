@@ -33,6 +33,10 @@ public class PackageDescription {
 	private String enc = "US-ASCII";
 	private String repr = null;
 
+	public PackageDescription() {
+
+	}
+
 	public PackageDescription(String pkg, String version, String license, String descr, String title, String author,
 			String maintainer) {
 		set("Package", pkg);
@@ -111,6 +115,14 @@ public class PackageDescription {
 	}
 
 	public File toTempFile() throws IOException {
+
+		for (String ent : new String[] { "Package", "Version", "License", "Description", "Title", "Author",
+				"Maintainer" }) {
+			if (!entries.keySet().contains(ent)) {
+				throw new IOException("field " + ent + " not set in Package DESCRIPTION file.");
+			}
+		}
+
 		File f = File.createTempFile("Rpository_DESCRIPTION", null);
 		f.deleteOnExit();
 		FileWriter fw = new FileWriter(f);
