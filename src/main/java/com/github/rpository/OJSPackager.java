@@ -15,25 +15,24 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
-public class Packager {
+public class OJSPackager {
 	private final String articleStmt = "SELECT published_articles.issue_id, published_articles.date_published, "
-			+ "S1.setting_value, S2.setting_value" + "FROM published_articles"
-			+ "JOIN article_settings S1 ON published_articles.article_id = S1.article_id"
-			+ "JOIN article_settings S2 ON published_articles.article_id = S2.article_id"
-			+ "WHERE S1.setting_name = \"title\" AND S2.setting_name = \"abstract\""
-			+ "AND published_articles.article_id = ?" + "LIMIT 1";
+			+ "S1.setting_value, S2.setting_value" + " FROM published_articles "
+			+ "JOIN article_settings S1 ON published_articles.article_id = S1.article_id "
+			+ "JOIN article_settings S2 ON published_articles.article_id = S2.article_id "
+			+ "WHERE S1.setting_name = \"title\" AND S2.setting_name = \"abstract\" "
+			+ "AND published_articles.article_id = ? LIMIT 1";
 	private final String authorsStmt = "SELECT authors.author_id, authors.primary_contact, authors.seq,"
-			+ "authors.first_name, authors.middle_name, authors.last_name, authors.country, authors.email"
-			+ "FROM published_articles" + "JOIN authors ON published_articles.article_id = authors.submission_id"
-			+ "WHERE published_articles.article_id = ?" + "ORDER BY authors.seq;";
-	private final String filesStmt = "SELECT F.file_name, F.original_file_name, F.type" + "FROM article_files F"
-			+ "WHERE F.article_id = ?";
+			+ " authors.first_name, authors.middle_name, authors.last_name, authors.country, authors.email"
+			+ " FROM published_articles" + " JOIN authors ON published_articles.article_id = authors.submission_id"
+			+ " WHERE published_articles.article_id = ?" + " ORDER BY authors.seq;";
+	private final String filesStmt = "SELECT F.file_name, F.original_file_name, F.type FROM article_files F WHERE F.article_id = ? ORDER BY file_name";
 
 	private final JdbcTemplate db;
 	private final String repoPath;
 	private final String filesPath;
 
-	public Packager(JdbcTemplate db, String repoPath, String filesPath) {
+	public OJSPackager(JdbcTemplate db, String repoPath, String filesPath) {
 		this.db = db;
 		this.repoPath = repoPath;
 		this.filesPath = filesPath;
@@ -61,7 +60,7 @@ public class Packager {
 
 		db.query(articleStmt, args, new RowCallbackHandler() {
 			public void processRow(ResultSet rs) throws SQLException {
-				pd.set("Date", rs.getString(2).split("")[1]);
+				pd.set("Date", rs.getString(2).split(" ", 2)[0]);
 				pd.set("Title", rs.getString(3));
 				pd.set("Description", rs.getString(4));
 			}
@@ -69,18 +68,21 @@ public class Packager {
 
 		db.query(authorsStmt, args, new RowCallbackHandler() {
 			public void processRow(ResultSet rs) throws SQLException {
+				if (authors.toString().startsWith("c(person(")) {
+					authors.append(", ");
+				}
 				authors.append("person(");
-				authors.append("given = \"").append(rs.getString(4)).append("\", family = \"").append(rs.getString(5))
+				authors.append("given = \"").append(rs.getString(4)).append("\", family = \"").append(rs.getString(6))
 						.append("\"");
-				pkgName.append(rs.getString(5));
-				if (rs.getString(5) != null) {
+				pkgName.append(rs.getString(6));
+				if (rs.getString(5) != null && rs.getString(5).length() > 0) {
 					authors.append(", middle = \"").append(rs.getString(5)).append("\"");
 				}
-				if (rs.getString(8) != null) {
-					authors.append(", email = \"").append(rs.getString(5)).append("\"");
+				if (rs.getString(8) != null && rs.getString(8).length() > 0) {
+					authors.append(", email = \"").append(rs.getString(8)).append("\"");
 				}
 
-				authors.append(",role = c(\"aut\"");
+				authors.append(", role = c(\"aut\"");
 				if (rs.getInt(2) == 1) {
 					// primary_contact
 					authors.append(", \"cre\"");
@@ -88,26 +90,40 @@ public class Packager {
 				authors.append("))");
 			}
 		});
-		pkgName.append(pd.get("Date").split("-", 1)[0]);
+		pd.set("Author@R", authors.toString());
+
+		pkgName.append(pd.get("Date").split("-", 2)[0]);
 		pd.set("Package", pkgName.toString());
 
 		fos = new FileOutputStream(repoPath + "/" + pkgName + "_1.0.tar.gz");
 		os = new TarArchiveOutputStream(new GzipCompressorOutputStream(fos));
 		pkgName.append("/");
+		// TODO
+		pd.set("Version", "1.0");
+		pd.set("License", "GPL (>=3)");
 
 		final PackageWriter pw = new PackageWriter(os, new ArchiveEntryFactory(ArchiveStreamFactory.TAR), pd,
 				pkgName.toString());
 
 		db.query(filesStmt, args, new RowCallbackHandler() {
+			String submissionPreprintName = null;
+
 			public void processRow(ResultSet rs) throws SQLException {
 				final String name = rs.getString(1);
 				final String origName = rs.getString(2);
 				final String type = rs.getString(3);
 				try {
-					if (type == "supp") {
+					if (type.equals("supp")) {
 						pw.appendLegacy(new File(suppPath + name), origName);
-					} else if (type == "public") {
-						pw.appendPreprint(new File(preprPath + name), origName);
+					} else if (type.equals("submission/original")) {
+						submissionPreprintName = origName;
+					} else if (type.equals("public")) {
+						if (submissionPreprintName == null) {
+							throw new SQLException(
+									"Preprint submission Database entry not processed before publication entry was processed.");
+						} else {
+							pw.appendPreprint(new File(preprPath + name), submissionPreprintName);
+						}
 					}
 				} catch (IOException ioe) {
 					throw new SQLException(ioe);
@@ -119,14 +135,15 @@ public class Packager {
 		return true;
 	}
 
-	public static int main(String[] argv) {
+	public static void main(String[] argv) {
 		if (argv.length < 3) {
 			System.err.println("Usage: PROGRAM R-Repository-Path Suppl-Files-Path [article_ids]");
+			return;
 		}
 		final DriverManagerDataSource ds = new DriverManagerDataSource("jdbc:mysql://localhost:3306/ojs", "ojs",
 				"admin");
 		final JdbcTemplate db = new JdbcTemplate(ds);
-		final Packager p = new Packager(db, argv[0], argv[1]);
+		final OJSPackager p = new OJSPackager(db, argv[0], argv[1]);
 		for (int i = 2; i < argv.length; ++i) {
 			try {
 				p.writeRpackage(Integer.parseInt(argv[i]));
@@ -141,6 +158,5 @@ public class Packager {
 				e.printStackTrace();
 			}
 		}
-		return 0;
 	}
 }

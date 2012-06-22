@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.regex.Pattern;
 
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
@@ -16,6 +17,7 @@ public class PackageWriter {
 	private final ArchiveOutputStream s;
 	private final String root;
 	private final ArchiveEntryFactory aef;
+	final Pattern doubleSlash = Pattern.compile("//+");
 
 	public PackageWriter(ArchiveOutputStream os, ArchiveEntryFactory aef, PackageDescription desc, String rootDirName)
 			throws IOException {
@@ -86,13 +88,14 @@ public class PackageWriter {
 
 		while (entryName.startsWith("/")) {
 			/* TODO inefficient, yes, but also shouldn't occur often */
-			entryName = entryName.substring(1);
+			entryName = "/////" + entryName.substring(1);
 		}
 
 		if (!entryName.startsWith(root)) {
-			return root + "/" + entryName;
+			entryName = root + entryName;
 		}
-		return entryName;
+
+		return doubleSlash.matcher(entryName).replaceAll("/");
 	}
 
 	public static void main(String[] argv) throws IOException {

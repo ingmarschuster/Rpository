@@ -10,6 +10,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /*
  * Quoting from "http://cran.r-project.org/doc/manuals/R-exts.html#The-DESCRIPTION-file":
@@ -115,10 +116,13 @@ public class PackageDescription {
 	}
 
 	public File toTempFile() throws IOException {
-
-		for (String ent : new String[] { "Package", "Version", "License", "Description", "Title", "Author",
-				"Maintainer" }) {
-			if (!entries.keySet().contains(ent)) {
+		final Set<String> keys = entries.keySet();
+		if (!((keys.contains("Maintainer") && keys.contains("Author")) || keys.contains("Author@R"))) {
+			//
+			throw new IOException("Neither Author/Maintainer nor Author@R set in Package DESCRIPTION file.");
+		}
+		for (String ent : new String[] { "Package", "Version", "License", "Description", "Title" }) {
+			if (!keys.contains(ent)) {
 				throw new IOException("field " + ent + " not set in Package DESCRIPTION file.");
 			}
 		}
