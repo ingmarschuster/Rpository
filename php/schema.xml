@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE schema SYSTEM "http://139.18.177.10/xmlSchema.dtd">
+
+<!--
+  * schema.xml
+  *  
+  * Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
+  *
+  * Rpository statistics plugin schema in XML.
+  -->
+
+<schema version="0.2">
+    <!--
+   *
+   * TABLE Rpository
+   *
+   -->
+    <table name="rpository">
+        <field name="packageId" type="I8">
+            <KEY/>
+            <AUTOINCREMENT/>
+        </field>
+        <field name="articleId" type="I8">
+            <NOTNULL/>
+        </field>
+        <field name="fileName" type="C2" size="60">
+            <NOTNULL/>
+        </field>
+        <field name="current" type="I1">
+            <NOTNULL/>
+        </field>
+        <field name="date" type="D">
+            <NOTNULL/>
+        </field>
+        <descr>Rpository</descr>
+        <index name="rpository_key">
+            <col>packageId</col>
+            <UNIQUE/>
+        </index>
+    </table>
+</schema>

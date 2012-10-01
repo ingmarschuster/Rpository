@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE locale SYSTEM "../../../../../lib/pkp/dtd/locale.dtd">
+
+<!--
+  * @file plugins/generic/rpository/locale/en_US/locale.xml
+  *
+  * Rpository plugin localization strings for the en_US (U.S. English) locale.
+  -->
+ 
+<locale name="en_US" full_name="U.S. English">
+	<message key="plugins.generic.rpository.displayName">Rpository</message>
+	<message key="plugins.generic.rpository.description">This plugin creates R-packages for published articles</message>
+	<message key="plugins.generic.rpository.enabled">Rpository Plugin has been enabled</message>
+	<message key="plugins.generic.rpository.disabled">Rpository Plugin has been disabled</message>
+	
+	<message key="plugins.generic.rpository.rpositoryArticle">View R-package for this article</message>
+
+</locale>

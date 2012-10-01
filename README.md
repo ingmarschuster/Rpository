@@ -1,4 +1,4 @@
 Rpository
 =========
 
-Java library for dynamically creating CRAN-like R repositories
+Library and Open Journal Systems plugin for creating CRAN-like R repositories

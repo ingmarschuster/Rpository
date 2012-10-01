@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE version SYSTEM "http://139.18.177.10/pluginVersion.dtd">
+
+<!--
+  * version.xml
+  *
+  * Copyright (c) 2003-2012 John Willinsky
+  * Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
+  *
+  * Plugin version information.
+  -->
+<version>
+        <application>rpository</application>
+        <type>plugins.generic</type>
+        <release>0.0.0.1</release>
+        <date>2012-09-30</date>
+        <lazy-load>0</lazy-load>
+        <class>RpositoryPlugin</class>
+</version>

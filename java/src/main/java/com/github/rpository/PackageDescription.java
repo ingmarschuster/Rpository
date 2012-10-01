@@ -15,18 +15,18 @@ import java.util.Set;
 /*
  * Quoting from "http://cran.r-project.org/doc/manuals/R-exts.html#The-DESCRIPTION-file":
  * 
- * The format is that of a `Debian Control File' (see the help for Ôread.dcfÕ and
+ * The format is that of a `Debian Control File' (see the help for ï¿½read.dcfï¿½ and
  * http://www.debian.org/doc/debian-policy/ch-controlfields.html: R does not require
  * encoding in UTF-8). Continuation lines (for example, for descriptions longer than one
  * line) start with a space or tab.
  * 
- * ÔPackageÕ, ÔVersionÕ, ÔLicenseÕ, ÔDescriptionÕ, ÔTitleÕ, ÔAuthorÕ, and ÔMaintainerÕ
- * fields are mandatory, all other fields are optional. For R 2.14.0 or later, ÔAuthorÕ
- * and ÔMaintainerÕ can be auto-generated from ÔAuthors@RÕ, and should be omitted if
+ * ï¿½Packageï¿½, ï¿½Versionï¿½, ï¿½Licenseï¿½, ï¿½Descriptionï¿½, ï¿½Titleï¿½, ï¿½Authorï¿½, and ï¿½Maintainerï¿½
+ * fields are mandatory, all other fields are optional. For R 2.14.0 or later, ï¿½Authorï¿½
+ * and ï¿½Maintainerï¿½ can be auto-generated from ï¿½Authors@Rï¿½, and should be omitted if
  * the latter is provided (and the package depends on R (>= 2.14): see below for details).
  * 
- * For maximal portability, the DESCRIPTION file should be written entirely in ASCII Ñ 
- * if this is not possible it must contain an ÔEncodingÕ field (see below).
+ * For maximal portability, the DESCRIPTION file should be written entirely in ASCII ï¿½ 
+ * if this is not possible it must contain an ï¿½Encodingï¿½ field (see below).
  */
 public class PackageDescription {
 
@@ -117,7 +117,7 @@ public class PackageDescription {
 
 	public File toTempFile() throws IOException {
 		final Set<String> keys = entries.keySet();
-		if (!((keys.contains("Maintainer") && keys.contains("Author")) || keys.contains("Author@R"))) {
+		if (!((keys.contains("Maintainer") && keys.contains("Author")) || keys.contains("Authors@R"))) {
 			//
 			throw new IOException("Neither Author/Maintainer nor Author@R set in Package DESCRIPTION file.");
 		}

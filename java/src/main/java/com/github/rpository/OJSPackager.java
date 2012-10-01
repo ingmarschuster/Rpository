@@ -16,16 +16,7 @@ import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 public class OJSPackager {
-	private final String articleStmt = "SELECT published_articles.issue_id, published_articles.date_published, "
-			+ "S1.setting_value, S2.setting_value" + " FROM published_articles "
-			+ "JOIN article_settings S1 ON published_articles.article_id = S1.article_id "
-			+ "JOIN article_settings S2 ON published_articles.article_id = S2.article_id "
-			+ "WHERE S1.setting_name = \"title\" AND S2.setting_name = \"abstract\" "
-			+ "AND published_articles.article_id = ? LIMIT 1";
-	private final String authorsStmt = "SELECT authors.author_id, authors.primary_contact, authors.seq,"
-			+ " authors.first_name, authors.middle_name, authors.last_name, authors.country, authors.email"
-			+ " FROM published_articles" + " JOIN authors ON published_articles.article_id = authors.submission_id"
-			+ " WHERE published_articles.article_id = ?" + " ORDER BY authors.seq;";
+
 	private final String filesStmt = "SELECT F.file_name, F.original_file_name, F.type FROM article_files F WHERE F.article_id = ? ORDER BY file_name";
 
 	private final JdbcTemplate db;
@@ -36,6 +27,17 @@ public class OJSPackager {
 		this.db = db;
 		this.repoPath = repoPath;
 		this.filesPath = filesPath;
+	}
+
+	public boolean removeRpackage(int article_id) throws IOException, SQLException {
+		final Object[] args = { new Integer(article_id) };
+		StringBuilder pkgName = new StringBuilder(repoPath);
+
+		pkgName.append("/");
+		db.query(ArticleCallbackHandler.articleStmt, args, new ArticleCallbackHandler(null, pkgName));
+		db.query(AuthorsCallbackHandler.authorsStmt, args, new AuthorsCallbackHandler(null, pkgName, null));
+		pkgName.append("_1.0.tar.gz");
+		return (new File(pkgName.toString())).delete();
 	}
 
 	public boolean writeRpackage(int article_id) throws IOException, SQLException {
@@ -54,45 +56,16 @@ public class OJSPackager {
 		final StringBuilder pkgName = new StringBuilder();
 		final OutputStream fos;
 		final ArchiveOutputStream os;
+		final PackageWriter pw;
 
 		pd.set("Repository", "PMR2");
 		pd.set("Depends", "R (>= 2.14)");
 
-		db.query(articleStmt, args, new RowCallbackHandler() {
-			public void processRow(ResultSet rs) throws SQLException {
-				pd.set("Date", rs.getString(2).split(" ", 2)[0]);
-				pd.set("Title", rs.getString(3));
-				pd.set("Description", rs.getString(4));
-			}
-		});
+		db.query(ArticleCallbackHandler.articleStmt, args, new ArticleCallbackHandler(pd, pkgName));
 
-		db.query(authorsStmt, args, new RowCallbackHandler() {
-			public void processRow(ResultSet rs) throws SQLException {
-				if (authors.toString().startsWith("c(person(")) {
-					authors.append(", ");
-				}
-				authors.append("person(");
-				authors.append("given = \"").append(rs.getString(4)).append("\", family = \"").append(rs.getString(6))
-						.append("\"");
-				pkgName.append(rs.getString(6));
-				if (rs.getString(5) != null && rs.getString(5).length() > 0) {
-					authors.append(", middle = \"").append(rs.getString(5)).append("\"");
-				}
-				if (rs.getString(8) != null && rs.getString(8).length() > 0) {
-					authors.append(", email = \"").append(rs.getString(8)).append("\"");
-				}
-
-				authors.append(", role = c(\"aut\"");
-				if (rs.getInt(2) == 1) {
-					// primary_contact
-					authors.append(", \"cre\"");
-				}
-				authors.append("))");
-			}
-		});
-		pd.set("Author@R", authors.toString());
-
-		pkgName.append(pd.get("Date").split("-", 2)[0]);
+		pd.set("Author", "");
+		db.query(AuthorsCallbackHandler.authorsStmt, args, new AuthorsCallbackHandler(authors, pkgName, pd));
+		pd.set("Authors@R", authors.append(")").toString());
 		pd.set("Package", pkgName.toString());
 
 		fos = new FileOutputStream(repoPath + "/" + pkgName + "_1.0.tar.gz");
@@ -102,8 +75,7 @@ public class OJSPackager {
 		pd.set("Version", "1.0");
 		pd.set("License", "GPL (>=3)");
 
-		final PackageWriter pw = new PackageWriter(os, new ArchiveEntryFactory(ArchiveStreamFactory.TAR), pd,
-				pkgName.toString());
+		pw = new PackageWriter(os, new ArchiveEntryFactory(ArchiveStreamFactory.TAR), pd, pkgName.toString());
 
 		db.query(filesStmt, args, new RowCallbackHandler() {
 			String submissionPreprintName = null;
@@ -136,17 +108,22 @@ public class OJSPackager {
 	}
 
 	public static void main(String[] argv) {
-		if (argv.length < 3) {
-			System.err.println("Usage: PROGRAM R-Repository-Path Suppl-Files-Path [article_ids]");
+		if (argv.length < 4) {
+			System.err.println("Usage: PROGRAM [create|remove] R-Repository-Path Suppl-Files-Path [article_ids]");
 			return;
 		}
-		final DriverManagerDataSource ds = new DriverManagerDataSource("jdbc:mysql://localhost:3306/ojs", "ojs",
+		// 10.0.2.15
+		final DriverManagerDataSource ds = new DriverManagerDataSource("jdbc:mysql://10.0.2.15:3306/ojs", "ojs",
 				"admin");
 		final JdbcTemplate db = new JdbcTemplate(ds);
-		final OJSPackager p = new OJSPackager(db, argv[0], argv[1]);
-		for (int i = 2; i < argv.length; ++i) {
+		final OJSPackager p = new OJSPackager(db, argv[1], argv[2]);
+		for (int i = 3; i < argv.length; ++i) {
 			try {
-				p.writeRpackage(Integer.parseInt(argv[i]));
+				if (argv[0].equals("create")) {
+					p.writeRpackage(Integer.parseInt(argv[i]));
+				} else if (argv[0].equals("remove")) {
+					p.removeRpackage(Integer.parseInt(argv[i]));
+				}
 			} catch (NumberFormatException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

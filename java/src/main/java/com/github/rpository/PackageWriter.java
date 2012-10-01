@@ -1,8 +1,8 @@
 package com.github.rpository;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.regex.Pattern;
@@ -48,11 +48,11 @@ public class PackageWriter {
 	// }
 
 	public void appendFile(File in, String entryName) throws IOException {
-		FileReader fr = new FileReader(in);
+		FileInputStream is = new FileInputStream(in);
 		s.putArchiveEntry(aef.newArchiveEntry(in, rt(entryName.trim())));
-		IOUtils.copy(fr, s);
+		IOUtils.copy(is, s);
 		s.closeArchiveEntry();
-		fr.close();
+		is.close();
 	}
 
 	public void appendLegacy(File in, String entryName) throws IOException {
