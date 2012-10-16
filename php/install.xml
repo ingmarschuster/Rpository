@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE install SYSTEM "../../lib/pkp/dtd/pluginVersion.dtd">
+
+<install version="0.9.0">
+    <schema file="plugins/generic/rpository/schema.xml" />
+</install>

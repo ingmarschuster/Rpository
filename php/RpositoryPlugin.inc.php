@@ -1,21 +1,25 @@
 <?php 
-import('classes.plugins.GenericPlugin'); 
+
+import('classes.plugins.GenericPlugin');
+require_once('OJSPackager.php');
+
 class RpositoryPlugin extends GenericPlugin {
     function register($category, $path){
-        $success = parent::register($category, $path);
-        if($success && $this->getEnabled()){
-            HookRegistry::register('articledao::_updatearticle', array(&$this, 'callback_updatearticle'));
+        if(parent::register($category, $path)){
+            Registry::set('RpositoryPlugIn', $this);
+            HookRegistry::register('articledao::_updatearticle', array(&$this, 'callback_update'));
+            HookRegistry::register('publishedarticledao::_updatepublishedarticle', array(&$this, 'callback_update'));
             return true;
         }
         return false; 
     }
     
-    function getName() { 
+    function getName(){ 
         return 'rpository';
     }
     
     function getDisplayName(){
-        return 'rpositoryPlugin';
+        return 'Rpository Plugin';
     }
     
     function getDescription(){
@@ -23,22 +27,30 @@ class RpositoryPlugin extends GenericPlugin {
     }
     
     function getInstallSchemaFile(){
-        return $this->getPluginPath() . '/' . 'schema.xml';
+        return $this->getPluginPath() . '/' . 'install.xml';
     }
-
     
-    function callback_updatearticle($hookName, $args){   
+    function callback_update($hookName, $args){
         $sql    =& $args[0]; 
         $params =& $args[1]; 
         $value  =& $args[2];
-                
-        $articleId      = $params[18];
-        $articlePublished  = ($params[6] === 3);
+         
+        $articleId = NULL;
+        $articlePublished = NULL;
+        
+        if($hookName === 'articledao::_updatearticle'){
+            $articleId      = $params[18];
+            $articlePublished  = ($params[6] === 3);
+        }
+        elseif($hookName === 'publishedarticledao::_updatepublishedarticle'){
+            $articleId = $params[0];
+            $articlePublished = true;
+        }
         
         // get references to DAOs needed for the update     
         $daos       =& DAORegistry::getDAOs();
         $articledao =& $daos['ArticleDAO'];
-        $article    =& $articledao->getArticle($articleId);
+        
         
         // TODO
         // this shouldn't work
@@ -51,13 +63,18 @@ class RpositoryPlugin extends GenericPlugin {
         $dbPassword = $articledao->_dataSource->password;
         $dbName     = $articledao->_dataSource->database;
         $db         = mysql_connect($dbHost, $dbLogin, $dbPassword);
+        
+        
+        
         // TODO
         // get $path dynamically 
         $path = '/var/www/Rpository/';
 
         
-        // do the article update and suppress hookcalls in DAO::update()
-        $articledao->update($sql, array(
+        // do the update and suppress hookcalls in DAO::update()
+        if($hookName === 'articledao::_updatearticle'){
+            $articledao->update($sql, array(
+                $article    =& $articledao->getArticle($articleId),
                 $article->getLocale(),
                 (int) $article->getUserId(),
                 (int) $article->getSectionId(),
@@ -78,6 +95,11 @@ class RpositoryPlugin extends GenericPlugin {
                 $article->getStoredDOI(),
                 $article->getId()
             ), false);
+        }
+        elseif($hookName === 'publishedarticledao::_updatepublishedarticle'){
+            $publishedarticledao =& $daos['PublishedArticleDAO'];
+            $publishedarticledao->update($sql, $params, false);
+        }
         
         if(!$articlePublished){
             return true;
@@ -113,6 +135,9 @@ class RpositoryPlugin extends GenericPlugin {
         }
         
         if((!$resultIsEmpty)&&($modifiedInLast2Days)){
+            $result_oldFilename = mysql_query("SELECT fileName FROM rpository WHERE articleId = $articleId");
+            $row_oldFilename = mysql_fetch_array($result_oldFilename);
+            unlink($path . $row_oldFilename[0]);
             if(!mysql_query("DELETE FROM rpository WHERE articleId = $articleId AND current = 1", $db)){
                 error_log('OJS - rpository: error deleting DB entry');
             }
@@ -123,30 +148,21 @@ class RpositoryPlugin extends GenericPlugin {
             }
         }
         
+        $result_journal_id = mysql_query("SELECT journals.journal_id FROM journals INNER JOIN articles ON journals.journal_id = articles.article_id WHERE article_id = $articleId");
+        $row_journal_id = mysql_fetch_array($result_journal_id);
         
-        exec("/opt/Rpository/art_to_repo.sh ". $articleId);
+        $test = new OJSPackager('/var/www/Rpository', Config::getVar('files', 'files_dir') . '/journals/' . $row_journal_id['journal_id'] . '/articles');
+        $writtenArchive = $test->writePackage($articleId);
         
-        // TODO
-        // this is a quick hack.
-        // filename should be known here and given as an argument to art_to_repo.sh
-        $latest_ctime = 0;
-        $latest_filename = '';
-
-        $d = dir($path);
-        while (false !== ($entry = $d->read())){
-            $filepath = "{$path}/{$entry}";
-            if(is_file($filepath) && (filectime($filepath) > $latest_ctime) && ($filepath != "{$path}/PACKAGES") &&($filepath != "{$path}/PACKAGES.gz")){
-                $latest_ctime = filectime($filepath);
-                $latest_filename = $entry;
-            }
-        }
-        if(!mysql_query("INSERT INTO rpository (articleId, fileName, current, date) VALUES ($articleId, '$latest_filename', 1, CURDATE())", $db)){
+        //exec("/opt/Rpository/art_to_repo.sh ". $articleId);        
+        
+        if(!mysql_query("INSERT INTO rpository (articleId, fileName, current, date) VALUES ($articleId, '$writtenArchive', 1, CURDATE())", $db)){
             error_log("OJS - rpository: error inserting DB entry " . mysql_error());
         }
         
         // return true to suppress a 2nd article update in DAO::update()
         // after the callback ran through
-        return true; 
+        return true;
     }
 } 
 ?>
