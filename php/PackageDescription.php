@@ -4,12 +4,14 @@ class PackageDescription{
     private $enc;
     private $repr;
     
+    // constructor
     public function __construct(){
         $this->entries  = array();
         $this->enc      = 'US-ASCII';
         $this->repr     = null;
     }
     
+    // TODO: still necessary?
     public function getEncoding(){
         return $this->enc;
     }
@@ -34,12 +36,12 @@ class PackageDescription{
     return $this->repr;
     }
     
+    // write the package description to a temp file and return the path to it
     public function toTempFile(){        
         if(!((array_key_exists('Maintainer', $this->entries) && array_key_exists('Author', $this->entries)) || array_key_exists("Author@R", $this->entries))){
             error_log("OJS - rpository: Neither Author/Maintainer nor Author@R set in Package DESCRIPTION file.");
             return null;
         }
-        
         if(!array_key_exists('Package', $this->entries)){
             error_log("OJS - rpository: field 'Package' not set in Package DESCRIPTION file.");
             return null;

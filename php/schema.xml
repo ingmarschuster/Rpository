@@ -11,6 +11,7 @@
             <NOTNULL/>
         </field>
         <field name="fileName" type="C2" size="60">
+            <UNIQUE/>
             <NOTNULL/>
         </field>
         <field name="current" type="I1">
