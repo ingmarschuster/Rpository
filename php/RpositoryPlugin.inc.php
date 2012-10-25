@@ -1,63 +1,73 @@
 <?php 
-import('classes.plugins.GenericPlugin'); 
+define("OUTPUT_PATH", "/var/www/Rpository/");
+import('classes.plugins.GenericPlugin');
+require_once('OJSPackager.php');
+require_once('RpositoryDAO.inc.php');
+
 class RpositoryPlugin extends GenericPlugin {
+    
+    // register hooks and daos to the ojs system
     function register($category, $path){
-        $success = parent::register($category, $path);
-        if($success && $this->getEnabled()){
-            HookRegistry::register('articledao::_updatearticle', array(&$this, 'callback_updatearticle'));
+        if(parent::register($category, $path)){
+            Registry::set('RpositoryPlugIn', $this);
+            HookRegistry::register('articledao::_updatearticle', array(&$this, 'callback_update'));
+            HookRegistry::register('publishedarticledao::_updatepublishedarticle', array(&$this, 'callback_update'));
+            
+            $this->import('RpositoryDAO');
+            $rpositoryDao = new RpositoryDAO();
+            DAORegistry::registerDAO('RpositoryDAO', $rpositoryDao);
             return true;
         }
         return false; 
     }
     
-    function getName() { 
+    // name of the plugin OJS will use internally
+    function getName(){ 
         return 'rpository';
     }
     
+    // name of the plugin OJS will show to users
     function getDisplayName(){
-        return 'rpositoryPlugin';
+        return 'Rpository Plugin';
     }
     
+    // description of the plugin OJS will show to users
     function getDescription(){
         return 'creates R-style packages for published articles';
     }
     
+    // path to the schema file OJS will try to parse during installation
     function getInstallSchemaFile(){
-        return $this->getPluginPath() . '/' . 'schema.xml';
+        return $this->getPluginPath() . '/' . 'install.xml';
     }
-
     
-    function callback_updatearticle($hookName, $args){   
+    // this is called whenever one of our registered hooks is fired
+    function callback_update($hookName, $args){
         $sql    =& $args[0]; 
         $params =& $args[1]; 
-        $value  =& $args[2];
-                
-        $articleId      = $params[18];
-        $articlePublished  = ($params[6] === 3);
+         
+        $articleId = NULL;
+        $articlePublished = NULL;
+        
+        // what hook was fired?
+        if($hookName === 'articledao::_updatearticle'){
+            $articleId          = $params[18];
+            $articlePublished   = ($params[6] === 3);
+        }
+        elseif($hookName === 'publishedarticledao::_updatepublishedarticle'){
+            $articleId          = $params[0];
+            $articlePublished   = true;
+        }
         
         // get references to DAOs needed for the update     
-        $daos       =& DAORegistry::getDAOs();
-        $articledao =& $daos['ArticleDAO'];
-        $article    =& $articledao->getArticle($articleId);
+        $daos           =& DAORegistry::getDAOs();
+        $articledao     =& $daos['ArticleDAO'];
+        $rpositorydao   =& $daos['RpositoryDAO'];
         
-        // TODO
-        // this shouldn't work
-        // every journal manager can get hold of the DB login/pw
-        //
-        // something like rpositoryDAO for rpository-specific DB transactions 
-        // looks like the way to go
-        $dbHost     = $articledao->_dataSource->host;
-        $dbLogin    = $articledao->_dataSource->user;
-        $dbPassword = $articledao->_dataSource->password;
-        $dbName     = $articledao->_dataSource->database;
-        $db         = mysql_connect($dbHost, $dbLogin, $dbPassword);
-        // TODO
-        // get $path dynamically 
-        $path = '/var/www/Rpository/';
-
-        
-        // do the article update and suppress hookcalls in DAO::update()
-        $articledao->update($sql, array(
+        // do the update and suppress hookcalls in DAO::update()
+        if($hookName === 'articledao::_updatearticle'){
+            $articledao->update($sql, array(
+                $article    =& $articledao->getArticle($articleId),
                 $article->getLocale(),
                 (int) $article->getUserId(),
                 (int) $article->getSectionId(),
@@ -78,33 +88,24 @@ class RpositoryPlugin extends GenericPlugin {
                 $article->getStoredDOI(),
                 $article->getId()
             ), false);
-        
+        }
+        elseif($hookName === 'publishedarticledao::_updatepublishedarticle'){
+            $publishedarticledao =& $daos['PublishedArticleDAO'];
+            $publishedarticledao->update($sql, $params, false);
+        }
+        // when the article isn't published we don't do anything to the repository
         if(!$articlePublished){
             return true;
-        }        
-        if(!$db){
-            error_log('OJS - rpository: connecting to MySQL failed');
-            return true;
-        }
-        if(!mysql_select_db($dbName, $db)){            
-            error_log('OJS - rpository: selecting DB failed');
-            return true;
         }
         
-        $result = null;
-        if(!$result = mysql_query("SELECT date, fileName FROM rpository WHERE articleId = $articleId AND current = 1", $db)){
-            error_log('OJS - rpository: SQL query failed');
-            return true;
-        }
-        
-        $resultIsEmpty = true;
+        // check whether or not we already created an archive for $articleId and if so when
+        $result = $rpositorydao->getDateFilename($articleId);
+        $resultIsEmpty = !array_key_exists('filename', $result);
         $modifiedInLast2Days = false;
-        $row = mysql_fetch_array($result);
-        if($row){
-            $resultIsEmpty = false;
+        if(!$resultIsEmpty){
             $date = new DateTime();
             $today = $date->getTimestamp();
-            $lastModified = strtotime($row['date']);
+            $lastModified = strtotime($result['date']);
 
             //  2 days = 8,640,000 msec
             if(($today - $lastModified) < 8640000){
@@ -112,41 +113,43 @@ class RpositoryPlugin extends GenericPlugin {
             }
         }
         
+        // we already created an archive and it was in the last two days -> delete the old archive and db entry
         if((!$resultIsEmpty)&&($modifiedInLast2Days)){
-            if(!mysql_query("DELETE FROM rpository WHERE articleId = $articleId AND current = 1", $db)){
+            if(!unlink(OUTPUT_PATH . $result['filename'])){
+                error_log('OJS - rpository: error deleting file ' . OUTPUT_PATH . $result['filename']);
+            }
+            if(!$rpositorydao->delCurrentEntry($articleId)){
                 error_log('OJS - rpository: error deleting DB entry');
             }
-           
-            
-            if(!unlink($path . $row['fileName'])){
-                error_log('OJS - rpository: error deleting file:' . $row['fileName']);
-            }
         }
+        // get journal_id for building the correct path to the article files and feed it to an OJSPackager
+        $journal_id = $rpositorydao->getJournalId($articleId);
+        $test = new OJSPackager(OUTPUT_PATH, Config::getVar('files', 'files_dir') . '/journals/' . $journal_id . '/articles');
         
+        // create the new package for $articleId
+        $writtenArchive = $test->writePackage($articleId);
         
-        exec("/opt/Rpository/art_to_repo.sh ". $articleId);
-        
-        // TODO
-        // this is a quick hack.
-        // filename should be known here and given as an argument to art_to_repo.sh
-        $latest_ctime = 0;
-        $latest_filename = '';
-
-        $d = dir($path);
-        while (false !== ($entry = $d->read())){
-            $filepath = "{$path}/{$entry}";
-            if(is_file($filepath) && (filectime($filepath) > $latest_ctime) && ($filepath != "{$path}/PACKAGES") &&($filepath != "{$path}/PACKAGES.gz")){
-                $latest_ctime = filectime($filepath);
-                $latest_filename = $entry;
+        // check for conflicting file names - in case of collusion add a suffix to archive name
+        if(!$rpositorydao->insertNewEntry($articleId, $writtenArchive)){
+            $suffix = 'a';
+            do{
+                if($suffix > 'z'){
+                    error_log('OJS - rpository: error creating archive');
+                    break;
+                }
+                if(!unlink($writtenArchive)){
+                    error_log('OJS - rpository: error deleting file ' . $writtenArchive);
+                }
+                $writtenArchive = $test->writePackage($articleId, $suffix);
+                ++$suffix;
             }
-        }
-        if(!mysql_query("INSERT INTO rpository (articleId, fileName, current, date) VALUES ($articleId, '$latest_filename', 1, CURDATE())", $db)){
-            error_log("OJS - rpository: error inserting DB entry " . mysql_error());
+            while(!$rpositorydao->insertNewEntry($articleId, $writtenArchive));
         }
         
         // return true to suppress a 2nd article update in DAO::update()
         // after the callback ran through
-        return true; 
+         
+        return true;
     }
 } 
 ?>

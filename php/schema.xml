@@ -1,20 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE schema SYSTEM "http://139.18.177.10/xmlSchema.dtd">
-
-<!--
-  * schema.xml
-  *  
-  * Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
-  *
-  * Rpository statistics plugin schema in XML.
-  -->
+<!DOCTYPE schema SYSTEM "../../../dbscripts/xml/dtd/xmlschema.dtd">
 
 <schema version="0.2">
-    <!--
-   *
-   * TABLE Rpository
-   *
-   -->
     <table name="rpository">
         <field name="packageId" type="I8">
             <KEY/>
@@ -24,6 +11,7 @@
             <NOTNULL/>
         </field>
         <field name="fileName" type="C2" size="60">
+            <UNIQUE/>
             <NOTNULL/>
         </field>
         <field name="current" type="I1">
@@ -32,7 +20,6 @@
         <field name="date" type="D">
             <NOTNULL/>
         </field>
-        <descr>Rpository</descr>
         <index name="rpository_key">
             <col>packageId</col>
             <UNIQUE/>
