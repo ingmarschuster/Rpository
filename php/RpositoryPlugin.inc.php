@@ -64,6 +64,7 @@ class RpositoryPlugin extends GenericPlugin {
         $articledao     =& $daos['ArticleDAO'];
         $rpositorydao   =& $daos['RpositoryDAO'];
         
+        
         // do the update and suppress hookcalls in DAO::update()
         if($hookName === 'articledao::_updatearticle'){
             $articledao->update($sql, array(
@@ -123,7 +124,8 @@ class RpositoryPlugin extends GenericPlugin {
             }
         }
         // get journal_id for building the correct path to the article files and feed it to an OJSPackager
-        $journal_id = $rpositorydao->getJournalId($articleId);
+        //$journal_id = $rpositorydao->getJournalId($articleId);
+        $journal_id = $articledao->getArticleJournalId($articleId);        
         $test = new OJSPackager(OUTPUT_PATH, Config::getVar('files', 'files_dir') . '/journals/' . $journal_id . '/articles');
         
         // create the new package for $articleId

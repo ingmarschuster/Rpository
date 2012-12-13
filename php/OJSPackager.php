@@ -114,23 +114,27 @@ class OJSPackager{
             $name       = $row_fileStmt['file_name'];
             $origName   = $row_fileStmt['original_file_name'];
             $type       = $row_fileStmt['type'];
+            error_log($name." ".$origName." ".$type);
             
             if($type == 'supp'){
                 if(!is_dir($tempDir . '/' . 'inst')){
-                    mkdir($tempDir . '/' . 'inst');
+                    mkdir($tempDir . '/' . 'inst', 0777, TRUE);
                 }
-                if(!copy($suppPath . $name, trim($tempDir . '/' . 'inst' . '/' . $origName))){
+                if(!copy($suppPath . $name, trim($tempDir) . '/' . 'inst' . '/' . $origName)){
                     error_log('OJS - rpository: error copying file: ' .$suppPath . $name . ' to: ' . trim($tempDir . '/' . 'inst' . '/' . $origName));
                 }
             }
             elseif($type == 'submission/original'){
+                // TODO: pdf name wird nicht ermittelt
                 $submissionPreprintName = $origName;
             }
             elseif($type == 'public'){
+                $submissionPreprintName = $origName;
                 if(!is_dir($tempDir . '/' . 'inst' . '/' . 'preprint')){
-                    mkdir($tempDir . '/' . 'inst' . '/' . 'preprint');
+                    mkdir($tempDir . '/' . 'inst' . '/' . 'preprint', 0777, TRUE);
                 }
-                copy($preprPath . $name, trim($tempDir . '/' . 'inst' . '/' . 'preprint' . '/' . $submissionPreprintName));
+                
+                copy($preprPath . $name, trim($tempDir) . '/' . 'inst' . '/' . 'preprint' . '/' . $submissionPreprintName);
             }
         }
         // create the archive with the temp directory we created above
