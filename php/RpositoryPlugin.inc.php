@@ -45,6 +45,10 @@ class RpositoryPlugin extends GenericPlugin {
     function callback_update($hookName, $args){
         $sql    =& $args[0]; 
         $params =& $args[1]; 
+//debug
+//	print_r($sql);
+//	print_r($params);
+//debug
          
         $articleId = NULL;
         $articlePublished = NULL;
@@ -67,8 +71,9 @@ class RpositoryPlugin extends GenericPlugin {
         
         // do the update and suppress hookcalls in DAO::update()
         if($hookName === 'articledao::_updatearticle'){
+            $article    =& $articledao->getArticle($articleId);
+
             $articledao->update($sql, array(
-                $article    =& $articledao->getArticle($articleId),
                 $article->getLocale(),
                 (int) $article->getUserId(),
                 (int) $article->getSectionId(),

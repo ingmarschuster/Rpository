@@ -114,8 +114,9 @@ class OJSPackager{
             $name       = $row_fileStmt['file_name'];
             $origName   = $row_fileStmt['original_file_name'];
             $type       = $row_fileStmt['type'];
+//debug
             error_log($name." ".$origName." ".$type);
-            
+//debug            
             if($type == 'supp'){
                 if(!is_dir($tempDir . '/' . 'inst')){
                     mkdir($tempDir . '/' . 'inst', 0777, TRUE);
@@ -125,8 +126,13 @@ class OJSPackager{
                 }
             }
             elseif($type == 'submission/original'){
-                // TODO: pdf name wird nicht ermittelt
+                // TODO: pdf name wird nicht ermittelt // verzeichnisstruktur weicht von java version ab
                 $submissionPreprintName = $origName;
+		if(!is_dir($tempDir . '/' . 'inst' . '/' . 'preprint')){
+                    mkdir($tempDir . '/' . 'inst' . '/' . 'preprint', 0777, TRUE);
+                }
+                
+                copy($this->filesPath   . "/" . $article_id . "/submission/original/". $name, trim($tempDir) . '/' . 'inst' . '/' . 'preprint' . '/' . $submissionPreprintName);
             }
             elseif($type == 'public'){
                 $submissionPreprintName = $origName;
@@ -143,7 +149,7 @@ class OJSPackager{
         }
         
         // delete temp directory
-        $this->deleteDirectory($tempDir);
+//        $this->deleteDirectory($tempDir);
         
         // return the name of created archive
         return $pkgName . '_1.0.tar.gz';
