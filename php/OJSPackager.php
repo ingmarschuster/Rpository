@@ -114,23 +114,33 @@ class OJSPackager{
             $name       = $row_fileStmt['file_name'];
             $origName   = $row_fileStmt['original_file_name'];
             $type       = $row_fileStmt['type'];
-            
+//debug
+            error_log($name." ".$origName." ".$type);
+//debug            
             if($type == 'supp'){
                 if(!is_dir($tempDir . '/' . 'inst')){
-                    mkdir($tempDir . '/' . 'inst');
+                    mkdir($tempDir . '/' . 'inst', 0777, TRUE);
                 }
-                if(!copy($suppPath . $name, trim($tempDir . '/' . 'inst' . '/' . $origName))){
+                if(!copy($suppPath . $name, trim($tempDir) . '/' . 'inst' . '/' . $origName)){
                     error_log('OJS - rpository: error copying file: ' .$suppPath . $name . ' to: ' . trim($tempDir . '/' . 'inst' . '/' . $origName));
                 }
             }
             elseif($type == 'submission/original'){
+                // TODO: pdf name wird nicht ermittelt // verzeichnisstruktur weicht von java version ab
                 $submissionPreprintName = $origName;
+		if(!is_dir($tempDir . '/' . 'inst' . '/' . 'preprint')){
+                    mkdir($tempDir . '/' . 'inst' . '/' . 'preprint', 0777, TRUE);
+                }
+                
+                copy($this->filesPath   . "/" . $article_id . "/submission/original/". $name, trim($tempDir) . '/' . 'inst' . '/' . 'preprint' . '/' . $submissionPreprintName);
             }
             elseif($type == 'public'){
+                $submissionPreprintName = $origName;
                 if(!is_dir($tempDir . '/' . 'inst' . '/' . 'preprint')){
-                    mkdir($tempDir . '/' . 'inst' . '/' . 'preprint');
+                    mkdir($tempDir . '/' . 'inst' . '/' . 'preprint', 0777, TRUE);
                 }
-                copy($preprPath . $name, trim($tempDir . '/' . 'inst' . '/' . 'preprint' . '/' . $submissionPreprintName));
+                
+                copy($preprPath . $name, trim($tempDir) . '/' . 'inst' . '/' . 'preprint' . '/' . $submissionPreprintName);
             }
         }
         // create the archive with the temp directory we created above
@@ -139,7 +149,7 @@ class OJSPackager{
         }
         
         // delete temp directory
-        $this->deleteDirectory($tempDir);
+//        $this->deleteDirectory($tempDir);
         
         // return the name of created archive
         return $pkgName . '_1.0.tar.gz';

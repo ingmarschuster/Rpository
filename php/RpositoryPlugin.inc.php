@@ -4,8 +4,7 @@ import('classes.plugins.GenericPlugin');
 require_once('OJSPackager.php');
 require_once('RpositoryDAO.inc.php');
 
-class RpositoryPlugin extends GenericPlugin {
-    
+class RpositoryPlugin extends GenericPlugin {    
     // register hooks and daos to the ojs system
     function register($category, $path){
         if(parent::register($category, $path)){
@@ -44,7 +43,12 @@ class RpositoryPlugin extends GenericPlugin {
     // this is called whenever one of our registered hooks is fired
     function callback_update($hookName, $args){
         $sql    =& $args[0]; 
-        $params =& $args[1]; 
+        $params =& $args[1];
+        
+//debug
+//	print_r($sql);
+//	print_r($params);
+//debug
          
         $articleId = NULL;
         $articlePublished = NULL;
@@ -58,16 +62,20 @@ class RpositoryPlugin extends GenericPlugin {
             $articleId          = $params[0];
             $articlePublished   = true;
         }
+        //debug
+        //error_log($hookName);
+        ///debug
         
         // get references to DAOs needed for the update     
         $daos           =& DAORegistry::getDAOs();
         $articledao     =& $daos['ArticleDAO'];
         $rpositorydao   =& $daos['RpositoryDAO'];
         
+        
         // do the update and suppress hookcalls in DAO::update()
         if($hookName === 'articledao::_updatearticle'){
+            $article    =& $articledao->getArticle($articleId);
             $articledao->update($sql, array(
-                $article    =& $articledao->getArticle($articleId),
                 $article->getLocale(),
                 (int) $article->getUserId(),
                 (int) $article->getSectionId(),
@@ -88,11 +96,13 @@ class RpositoryPlugin extends GenericPlugin {
                 $article->getStoredDOI(),
                 $article->getId()
             ), false);
+            
         }
         elseif($hookName === 'publishedarticledao::_updatepublishedarticle'){
             $publishedarticledao =& $daos['PublishedArticleDAO'];
             $publishedarticledao->update($sql, $params, false);
         }
+        
         // when the article isn't published we don't do anything to the repository
         if(!$articlePublished){
             return true;
@@ -123,7 +133,8 @@ class RpositoryPlugin extends GenericPlugin {
             }
         }
         // get journal_id for building the correct path to the article files and feed it to an OJSPackager
-        $journal_id = $rpositorydao->getJournalId($articleId);
+        //$journal_id = $rpositorydao->getJournalId($articleId);
+        $journal_id = $articledao->getArticleJournalId($articleId);        
         $test = new OJSPackager(OUTPUT_PATH, Config::getVar('files', 'files_dir') . '/journals/' . $journal_id . '/articles');
         
         // create the new package for $articleId
@@ -146,10 +157,14 @@ class RpositoryPlugin extends GenericPlugin {
             while(!$rpositorydao->insertNewEntry($articleId, $writtenArchive));
         }
         
+        
+        
         // return true to suppress a 2nd article update in DAO::update()
-        // after the callback ran through
+        // after the callback ran through - at least I thought that's what
+        // has to be done here - obviously I'm wrong. Returning true breaks
+        // QuickSubmitPlugin
          
-        return true;
+        return false;
     }
 } 
 ?>
