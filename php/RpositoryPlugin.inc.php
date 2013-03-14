@@ -1,5 +1,6 @@
 <?php 
-define("OUTPUT_PATH", "/var/www/Rpository/");
+define("OUTPUT_PATH", "/var/www/Rpository/R/src/contrib/");
+define("R_INDEX_CMD", 'tools::write_PACKAGES(".",fields=c( "Author", "Date", "Title", "Description", "License", "Suggests", "DOI", "CLARIN-PID"), type=c("source"),verbose=TRUE)')
 import('classes.plugins.GenericPlugin');
 require_once('OJSPackager.php');
 require_once('RpositoryDAO.inc.php');
@@ -39,6 +40,11 @@ class RpositoryPlugin extends GenericPlugin {
     function getInstallSchemaFile(){
         return $this->getPluginPath() . '/' . 'install.xml';
     }
+	
+	function updatePackageIndex(){
+		$output = shell_exec('cd ' . OUTPUT_PATH . '; echo ' . escapeshellcmd(R_INDEX_CMD) . '| /usr/bin/R -q --vanilla' );
+		error_log('OJS - rpository: writing Package Index. Got ' . $output);
+	}
     
     // this is called whenever one of our registered hooks is fired
     function callback_update($hookName, $args){
@@ -156,6 +162,7 @@ class RpositoryPlugin extends GenericPlugin {
             }
             while(!$rpositorydao->insertNewEntry($articleId, $writtenArchive));
         }
+		$this->updatePackageIndex();
         
         
         
