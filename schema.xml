@@ -20,6 +20,12 @@
         <field name="date" type="D">
             <NOTNULL/>
         </field>
+        <field name="pidv1" type="C2" size="60">
+            <UNIQUE/>
+        </field>
+        <field name="pidv2" type="C2" size="60">
+            <UNIQUE/>
+        </field>
         <index name="rpository_key">
             <col>packageId</col>
             <UNIQUE/>
