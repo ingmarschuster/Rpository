@@ -13,3 +13,6 @@
 
 *Credentials*php
 *credentials*php
+
+build/*
+!build/build.sh
