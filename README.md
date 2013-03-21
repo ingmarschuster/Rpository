@@ -1,4 +1,4 @@
 Rpository
 =========
 
-Library and Open Journal Systems plugin for creating CRAN-like R repositories
+a PHP plugin for "Open Journal Systems" for creating CRAN-like R repositories
