@@ -446,24 +446,35 @@ class RpositoryDAO extends DAO{
     }
     
     function updatePID($articleId){
-        /*$pidv1 = $this->fetchPIDv1($articleId);
-        //error_log("pidv1 response: " . print_r($pidv1, TRUE));
-        if($pidv1 == NULL){
-            error_log("OJS - rpository: error fetching pidv1");
-        }
-        else{
-            $this->updatePIDv1($articleId, $pidv1);
-        }
-	*/
-        
-        $pidv2 = $this->fetchPIDv2($articleId);
-        if($pidv2 == NULL){
-            error_log("OJS - rpository: error fetching pidv2");
-        }
-        else{
-            $this->updatePIDv2($articleId, $pidv2);
-        }
-        return TRUE;
+        /*
+       if (PIDV1_USER != "PIDv1_User" && PIDV1_PW != "PIDv1_Passwd"){
+           //template has been filled with username & password
+           $pidv1 = $this->fetchPIDv1($articleId);
+       } else {
+           error_log("PIDv*_User and PIDv*_Passwd need to be filled in.")
+           $pidv1 = NULL;
+       }
+       //error_log("pidv1 response: " . print_r($pidv1, TRUE));
+       if($pidv1 == NULL){
+           error_log("OJS - rpository: error fetching pidv1");
+       }
+       else{
+           $this->updatePIDv1($articleId, $pidv1);
+       }
+       */
+       if (PIDV2_USER != "PIDv2_User" && PIDV2_PW != "PIDv2_Passwd"){
+           //template has been filled with username & password
+           $pidv2 = $this->fetchPIDv2($articleId);
+       } else {
+           error_log("PIDv*_User and PIDv*_Passwd need to be filled in.")
+           $pidv2 = NULL;
+       }
+       if($pidv2 == NULL){
+           error_log("OJS - rpository: error fetching pidv2");
+       }else{
+           $this->updatePIDv2($articleId, $pidv2);
+       }
+       return TRUE;
     }
 }
 ?>
