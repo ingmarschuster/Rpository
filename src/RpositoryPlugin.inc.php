@@ -1,8 +1,9 @@
 <?php 
-define("OUTPUT_PATH", "/var/www/Rpository/");
+import('classes.plugins.GenericPlugin'); 
 import('classes.plugins.GenericPlugin');
 require_once('OJSPackager.php');
 require_once('RpositoryDAO.inc.php');
+require_once('PidWebserviceCredentials.inc.php');
 
 class RpositoryPlugin extends GenericPlugin {    
     // register hooks and daos to the ojs system
@@ -40,41 +41,37 @@ class RpositoryPlugin extends GenericPlugin {
         return $this->getPluginPath() . '/' . 'install.xml';
     }
     
+    function updatePackageIndex(){
+	$rcmd = 'tools::write_PACKAGES\(\".\",fields=c\( \"Author\", \"Date\", \"Title\", \"Description\", \"License\", \"Suggests\", \"DOI\", \"CLARIN-PID\"\), type=c\(\"source\"\),verbose=TRUE\)';
+        $output = shell_exec('cd ' . OUTPUT_PATH . '; echo ' . $rcmd  . '| /usr/bin/R -q --vanilla' );
+    }
+    
     // this is called whenever one of our registered hooks is fired
     function callback_update($hookName, $args){
         $sql    =& $args[0]; 
         $params =& $args[1];
         
-//debug
-//	print_r($sql);
-//	print_r($params);
-//debug
-         
         $articleId = NULL;
-        $articlePublished = NULL;
         
         // what hook was fired?
         if($hookName === 'articledao::_updatearticle'){
             $articleId          = $params[18];
-            $articlePublished   = ($params[6] === 3);
         }
         elseif($hookName === 'publishedarticledao::_updatepublishedarticle'){
             $articleId          = $params[0];
-            $articlePublished   = true;
         }
-        //debug
-        //error_log($hookName);
-        ///debug
-        
+               
         // get references to DAOs needed for the update     
         $daos           =& DAORegistry::getDAOs();
         $articledao     =& $daos['ArticleDAO'];
         $rpositorydao   =& $daos['RpositoryDAO'];
         
-        
         // do the update and suppress hookcalls in DAO::update()
         if($hookName === 'articledao::_updatearticle'){
             $article    =& $articledao->getArticle($articleId);
+            if($article == NULL){
+                return FALSE;
+            }
             $articledao->update($sql, array(
                 $article->getLocale(),
                 (int) $article->getUserId(),
@@ -96,75 +93,41 @@ class RpositoryPlugin extends GenericPlugin {
                 $article->getStoredDOI(),
                 $article->getId()
             ), false);
-            
         }
         elseif($hookName === 'publishedarticledao::_updatepublishedarticle'){
             $publishedarticledao =& $daos['PublishedArticleDAO'];
             $publishedarticledao->update($sql, $params, false);
         }
         
+        
         // when the article isn't published we don't do anything to the repository
-        if(!$articlePublished){
-            return true;
-        }
+        if(!$rpositorydao->articleIsPublished($articleId)){
+            return FALSE;
+        }        
         
-        // check whether or not we already created an archive for $articleId and if so when
-        $result = $rpositorydao->getDateFilename($articleId);
-        $resultIsEmpty = !array_key_exists('filename', $result);
-        $modifiedInLast2Days = false;
-        if(!$resultIsEmpty){
-            $date = new DateTime();
-            $today = $date->getTimestamp();
-            $lastModified = strtotime($result['date']);
-
-            //  2 days = 8,640,000 msec
-            if(($today - $lastModified) < 8640000){
-                $modifiedInLast2Days = true;
-            }
-        }
-        
-        // we already created an archive and it was in the last two days -> delete the old archive and db entry
-        if((!$resultIsEmpty)&&($modifiedInLast2Days)){
-            if(!unlink(OUTPUT_PATH . $result['filename'])){
-                error_log('OJS - rpository: error deleting file ' . OUTPUT_PATH . $result['filename']);
-            }
-            if(!$rpositorydao->delCurrentEntry($articleId)){
-                error_log('OJS - rpository: error deleting DB entry');
-            }
-        }
-        // get journal_id for building the correct path to the article files and feed it to an OJSPackager
-        //$journal_id = $rpositorydao->getJournalId($articleId);
         $journal_id = $articledao->getArticleJournalId($articleId);        
-        $test = new OJSPackager(OUTPUT_PATH, Config::getVar('files', 'files_dir') . '/journals/' . $journal_id . '/articles');
+        $packager = new OJSPackager(Config::getVar('files', 'files_dir') . '/journals/' . $journal_id . '/articles');
         
         // create the new package for $articleId
-        $writtenArchive = $test->writePackage($articleId);
+        $archive = $packager->writePackage($articleId);
         
-        // check for conflicting file names - in case of collusion add a suffix to archive name
-        if(!$rpositorydao->insertNewEntry($articleId, $writtenArchive)){
-            $suffix = 'a';
-            do{
-                if($suffix > 'z'){
-                    error_log('OJS - rpository: error creating archive');
-                    break;
-                }
-                if(!unlink($writtenArchive)){
-                    error_log('OJS - rpository: error deleting file ' . $writtenArchive);
-                }
-                $writtenArchive = $test->writePackage($articleId, $suffix);
-                ++$suffix;
-            }
-            while(!$rpositorydao->insertNewEntry($articleId, $writtenArchive));
+        if($archive == NULL){
+            error_log("OJS - rpository: creating archive failed");
+            return FALSE;
+        }
+        
+        // insert new Package into repository
+        $writtenArchive = $rpositorydao->updateRepository($articleId, $archive);
+        if($writtenArchive == NULL){
+            return FALSE;
+        }
+        else{
+            $this->updatePackageIndex();
         }
         
         
         
-        // return true to suppress a 2nd article update in DAO::update()
-        // after the callback ran through - at least I thought that's what
-        // has to be done here - obviously I'm wrong. Returning true breaks
-        // QuickSubmitPlugin
-         
-        return false;
+        return FALSE;
     }
 } 
 ?>

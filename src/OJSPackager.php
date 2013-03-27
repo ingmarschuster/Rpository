@@ -1,16 +1,15 @@
 <?php
 require_once('PackageDescription.php');
 require_once('Tar.php');
+require_once('descr_escape.php');
 
 
 class OJSPackager{
-    private $repoPath;
     private $filesPath;
     private $rpositorydao;
     
     // constructor
-    public function __construct($repoPath, $filesPath){
-        $this->repoPath     = $repoPath;
+    public function __construct($filesPath){        
         $this->filesPath    = $filesPath;
         $daos               =& DAORegistry::getDAOs();
         $this->rpositorydao =& $daos['RpositoryDAO'];
@@ -50,7 +49,7 @@ class OJSPackager{
 
 
     // create R-style package for given $article_id
-    public function writePackage($article_id, $suffix=''){    
+    public function writePackage($article_id, $suffix=''){
         $suppPath = $this->filesPath    . "/" . $article_id . "/supp/";
         $preprPath = $this->filesPath   . "/" . $article_id . "/public/";
         $pd = new PackageDescription();
@@ -58,8 +57,8 @@ class OJSPackager{
         $pkgName = "";        
         
         // get the handle used by OJS for the journal $article_id was published in
-        $journal_path = $this->rpositorydao->getJournalPath($article_id);
-        $pd->set("Repository", $journal_path);        
+        #$journal_path = $this->rpositorydao->getJournalPath($article_id);
+        $pd->set("Repository", "OpenScienceRepository");        
         $pd->set("Depends", "R (>= 2.14)");                
         
         // get the date the article was published and its title and description
@@ -71,6 +70,11 @@ class OJSPackager{
         // get author details of $article_id and put them into the DESCRIPTION file
         $result_authorStmt = $this->rpositorydao->getAuthorStatement($article_id);
         foreach($result_authorStmt as $row_authorStmt){
+	    if(strlen($pd->get("Author"))){
+	    	$pd->set("Author", $pd->get("Author"). " and ");
+	    }
+	    $pd->set("Author", $pd->get("Author") .  $row_authorStmt['first_name'] . " " . $row_authorStmt['last_name']);
+
             if($this->beginsWith($authors, "c(person(")){
                 $authors.=", ";
             }
@@ -87,25 +91,34 @@ class OJSPackager{
             if($row_authorStmt['primary_contact'] == 1){
                 // primary_contact
                 $authors.=', "cre"';
+		$contMail = "";
+		if($row_authorStmt['email'] != NULL && strlen($row_authorStmt['email']) > 0){
+		    $contMail =  " <" . $row_authorStmt['email'] . ">";
+		}
+		$pd->set("Maintainer", $row_authorStmt['first_name'] . " " . $row_authorStmt['last_name'] . $contMail);
             }
             $authors.='))';
         }
-        $pd->set("Author@R", $authors);
+	$authors.=')';
+        $pd->set("Authors@R", $authors);
         $temp = explode('-', $pd->get("Date"));
         $pkgName = $pkgName . $temp[0] . $suffix;
         unset($temp);
         $pd->set("Package", $pkgName);
         
         // path to write the package to
-        $archive = $this->repoPath . '/' . $pkgName . '_1.0.tar.gz';
+        $archive = sys_get_temp_dir() . '/' . $pkgName;
         
         $pd->set("Version", "1.0");
-        $pd->set("License", "GPL (>=3)");
+        $pd->set("License", "CC BY-NC (http://creativecommons.org/licenses/by-nc/3.0/de/)");
         
         // create a directory under the system temp dir for and copy the article and its supplementary files to there
         $randomDirName = 'rpo-' . $this->randomStringGen(20);
         mkdir(sys_get_temp_dir() . '/' . $randomDirName);
         $tempDir = sys_get_temp_dir() . '/' . $randomDirName;
+
+	//$pdfile = $pdfile;
+	//error_log("OJS - Rpository: ". $pdfile);
         rename($pd->toTempFile(), $tempDir .'/' . 'DESCRIPTION');
         $pw = new Archive_Tar($archive, 'gz');
         $result_fileStmt = $this->rpositorydao->getFileStatement($article_id);
@@ -114,9 +127,7 @@ class OJSPackager{
             $name       = $row_fileStmt['file_name'];
             $origName   = $row_fileStmt['original_file_name'];
             $type       = $row_fileStmt['type'];
-//debug
-            error_log($name." ".$origName." ".$type);
-//debug            
+        
             if($type == 'supp'){
                 if(!is_dir($tempDir . '/' . 'inst')){
                     mkdir($tempDir . '/' . 'inst', 0777, TRUE);
@@ -149,10 +160,10 @@ class OJSPackager{
         }
         
         // delete temp directory
-//        $this->deleteDirectory($tempDir);
+        $this->deleteDirectory($tempDir);
         
         // return the name of created archive
-        return $pkgName . '_1.0.tar.gz';
+        return $archive;
     }
  }
 ?>

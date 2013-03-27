@@ -1,4 +1,6 @@
 <?php
+require_once('descr_escape.php');
+
 class PackageDescription{
     private $entries;
     private $enc;
@@ -17,12 +19,19 @@ class PackageDescription{
     }
     
     public function get($fieldName){
-        return $this->entries[$fieldName];
+	if (array_key_exists($fieldName, $this->entries)){
+	    return $this->entries[$fieldName];
+	} else {
+	   return NULL; 
+	}
     }
     
     public function set($fieldName, $content){
         $this->repr = null;
-        $this->entries[$fieldName] = $content;
+	if ($fieldName == 'Description') {
+	    $content = strip_tags($content);
+	}
+        $this->entries[$fieldName] = descr_escape($content);
     }
     
     public function __toString(){
@@ -38,8 +47,8 @@ class PackageDescription{
     
     // write the package description to a temp file and return the path to it
     public function toTempFile(){        
-        if(!((array_key_exists('Maintainer', $this->entries) && array_key_exists('Author', $this->entries)) || array_key_exists("Author@R", $this->entries))){
-            error_log("OJS - rpository: Neither Author/Maintainer nor Author@R set in Package DESCRIPTION file.");
+        if(!((array_key_exists('Maintainer', $this->entries) && array_key_exists('Author', $this->entries)) || array_key_exists("Authors@R", $this->entries))){
+            error_log("OJS - rpository: Neither Author/Maintainer nor Authors@R set in Package DESCRIPTION file.");
             return null;
         }
         if(!array_key_exists('Package', $this->entries)){
