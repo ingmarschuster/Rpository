@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plugin_settings SYSTEM "../../../lib/pkp/dtd/pluginSettings.dtd">
+
+<!--
+  * settings.xml
+  *
+  * Copyright (c) 2003-2012 John Willinsky
+  * Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
+  *
+  * Default plugin settings.
+  *
+  * $Id$
+  -->
+
+<plugin_settings>
+    <setting type="int">
+        <name>pidstatus</name>
+        <value>0</value>
+    </setting>
+    <setting type="string">
+        <name>output_path</name>
+        <value>/var/www/Rpository/src/contrib/</value>
+    </setting>
+    <setting type="string">
+        <name>repository_url</name>
+        <value>http://asvsp.informatik.uni-leipzig.de/Rpository/src/contrib/</value>
+    </setting>
+    <setting type="string">
+        <name>pidv1_service_url</name>
+        <value>http://handle.gwdg.de:8080/pidservice/write/create</value>
+    </setting>
+    <setting type="int">
+        <name>pidv1_timeout</name>
+        <value>20</value>
+    </setting>
+    <setting type="string">
+        <name>pidv1_user</name>
+        <value></value>
+    </setting>
+    <setting type="string">
+        <name>pidv1_pw</name>
+        <value></value>
+    </setting>
+    <setting type="string">
+        <name>pidv2_prefix</name>
+        <value>11022</value>
+    </setting>
+    <setting type="string">
+        <name>pidv2_service_url</name>
+        <value>http://pid.gwdg.de/handles/</value>
+    </setting>
+    <setting type="int">
+        <name>pidv2_timeout</name>
+        <value>20</value>
+    </setting>
+    <setting type="string">
+        <name>pidv2_user</name>
+        <value></value>
+    </setting>
+    <setting type="string">
+        <name>pidv2_pw</name>
+        <value></value>
+    </setting>
+</plugin_settings>

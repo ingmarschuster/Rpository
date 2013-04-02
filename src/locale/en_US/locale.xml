@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE locale SYSTEM "../../../../../lib/pkp/dtd/locale.dtd">
+
+<!--
+  * locale.xml
+  *
+  * Copyright (c) 2003-2012 John Willinsky
+  * Distributed under the GNU GPL v2. For full terms see the file docs/COPYING.
+  *
+  * Localization strings for the en_US (U.S. English) locale.
+  *
+  * $Id$
+  -->
+ 
+<locale name="en_US" full_name="U.S. English">
+	<message key="plugins.generic.rpository.name">Rpository Plugin</message>
+        <message key="plugins.generic.rpository.settings.enabled">Rpository active for this Journal</message>
+	<message key="plugins.generic.rpository.settings.description">The Rpository Plugin creates a CRAN-like R repository for published articles and registers handles to point to the archives. This form is used to setup the required paths and user credentials.</message>
+	<message key="plugins.generic.rpository.settings">Rpository Plugin Settings</message>
+	<message key="plugins.generic.rpository.settings.pidselect">PID settings</message>
+        <message key="plugins.generic.rpository.settings.pidusev1">use PID EPIC API v1</message>
+        <message key="plugins.generic.rpository.settings.pidusev2">use PID EPIC API v2</message>
+	<message key="plugins.generic.rpository.settings.pidv1user">Username</message>
+	<message key="plugins.generic.rpository.settings.pidv2user">Username</message>
+	<message key="plugins.generic.rpository.settings.pidv1password">Password</message>
+	<message key="plugins.generic.rpository.settings.pidv2password">Password</message>
+	<message key="plugins.generic.rpository.settings.pidv1serviceurl">Service URL</message>
+        <message key="plugins.generic.rpository.settings.pidv2serviceurl">Service URL</message>
+	<message key="plugins.generic.rpository.settings.pidv1timeout">Service Timeout</message>
+        <message key="plugins.generic.rpository.settings.pidv2timeout">Service Timeout</message>
+	<message key="plugins.generic.rpository.settings.pidv2prefix">Prefix</message>
+	<message key="plugins.generic.rpository.settings.outputpath">Output path</message>
+	<message key="plugins.generic.rpository.settings.repositoryurl">Repository URL</message>
+	<message key="plugins.generic.rpository.settings.fetchpidsv1">Fetch v1 PIDs for published articles without an assigned v1 PID.</message>
+	<message key="plugins.generic.rpository.settings.fetchpidsv2">Fetch v2 PIDs for published articles without an assigned v2 PID.</message>
+</locale>
