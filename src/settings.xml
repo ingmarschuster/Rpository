@@ -35,11 +35,11 @@
     </setting>
     <setting type="string">
         <name>pidv1_user</name>
-        <value></value>
+        <value>pidv1user</value>
     </setting>
     <setting type="string">
         <name>pidv1_pw</name>
-        <value></value>
+        <value>pidv1pw</value>
     </setting>
     <setting type="string">
         <name>pidv2_prefix</name>
@@ -55,10 +55,10 @@
     </setting>
     <setting type="string">
         <name>pidv2_user</name>
-        <value></value>
+        <value>pidv2user</value>
     </setting>
     <setting type="string">
         <name>pidv2_pw</name>
-        <value></value>
+        <value>pidv2pw</value>
     </setting>
 </plugin_settings>

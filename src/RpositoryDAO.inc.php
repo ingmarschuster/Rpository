@@ -470,7 +470,7 @@ class RpositoryDAO extends DAO{
         }
         
         if($plugin->getSetting(0, 'pidstatus') == 2){
-            if($plugin->getSetting(0, 'pidv2_pw') == "" || $plugin->getSetting(0, 'pidv1_user')== ""){
+            if($plugin->getSetting(0, 'pidv2_pw') == "" || $plugin->getSetting(0, 'pidv2_user')== ""){
                 error_log("PIDv2_User and PIDv2_Passwd need to be filled in.");
                 return FALSE;
             }

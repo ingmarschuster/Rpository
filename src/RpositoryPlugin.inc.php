@@ -137,9 +137,9 @@ class RpositoryPlugin extends GenericPlugin {
     }
     
     /**
-         * Install default settings on system install.
-         * @return string
-         */
+     * Install default settings on system install.
+     * @return string
+     */
     function getInstallSitePluginSettingsFile() {
         return $this->getPluginPath() . '/settings.xml';
     }
@@ -214,4 +214,3 @@ class RpositoryPlugin extends GenericPlugin {
     }
 } 
 ?>
-
