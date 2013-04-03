@@ -151,12 +151,12 @@ class RpositoryDAO extends DAO{
         }
     }
     
-    function updateRepository($articleId, $writtenArchive){
+    function updateRepository(&$plugin, $articleId, $writtenArchive){
         $oldFile = $this->packageCreatedInLast2Days($articleId);
 	$oldPid = array(NULL, NULL);
         if($oldFile != NULL){
-            if(!unlink(OUTPUT_PATH . $oldFile)){
-                error_log('OJS - rpository: error deleting file ' . OUTPUT_PATH . $oldFile);
+            if(!unlink($plugin->getSetting(0, 'output_path') . $oldFile)){
+                error_log('OJS - rpository: error deleting file ' . $plugin->getSetting(0, 'output_path') . $oldFile);
             }
 	    $oldPid = array($this->getPidV1($articleId), $this->getPidV2($articleId));
             if(!$this->delCurrentEntry($articleId)){
@@ -176,7 +176,7 @@ class RpositoryDAO extends DAO{
             }
         }
         
-        $success = rename($writtenArchive, OUTPUT_PATH . basename($writtenArchive) . $suffix . "_1.0.tar.gz");
+        $success = rename($writtenArchive, $plugin->getSetting(0, 'output_path') . basename($writtenArchive) . $suffix . "_1.0.tar.gz");
         if(!$success){
             error_log('OJS - rpository: error writing new package to repository');
             return NULL;
@@ -190,7 +190,7 @@ class RpositoryDAO extends DAO{
         }
 	if(!$this->hasPID($articleId)){
 	// do pid stuff
-	    $success = $this->updatePID($articleId);
+	    $success = $this->updatePID($plugin, $articleId);
 	    if(!$success){
 		error_log("OJS - rpository: error fetching PID for archive: " . $writtenArchive);
 	    }
@@ -302,7 +302,7 @@ class RpositoryDAO extends DAO{
         }
     }
     
-    function fetchPIDv1($articleId){
+    function fetchPIDv1(&$plugin, $articleId){
         $daos               =& DAORegistry::getDAOs();
         $articleDao         =& $daos['ArticleDAO'];
         
@@ -311,7 +311,7 @@ class RpositoryDAO extends DAO{
 	    error_log("OJS - rpository: getPackageName failed");
             return NULL;
         }
-        $fileSize = filesize(OUTPUT_PATH . $url);
+        $fileSize = filesize($plugin->getSetting(0, 'output_path') . $url);
         if($fileSize == NULL){
  	    error_log("couldn't get file size");
             return NULL;
@@ -321,7 +321,7 @@ class RpositoryDAO extends DAO{
             return NULL;
         }
         else{
-            $url = REPOSITORY_URL . $url['filename'];
+            $url = $plugin->getSetting(0, 'repository_url') . $url['filename'];
         }
                 
         $article = $articleDao->getArticle($articleId);
@@ -362,13 +362,13 @@ class RpositoryDAO extends DAO{
         // curl stuff
         $ch = curl_init();        
         //curl_setopt($ch, CURLOPT_VERBOSE, TRUE);
-        curl_setopt($ch, CURLOPT_URL, PIDV1_SERVICE_URL);
+        curl_setopt($ch, CURLOPT_URL, $plugin->getSetting(0, 'pidv1_service_url'));
         curl_setopt($ch, CURLOPT_POST, TRUE);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $fields_string);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-        curl_setopt($ch, CURLOPT_TIMEOUT, PIDV1_TIMEOUT);
-        curl_setopt($ch, CURLOPT_USERPWD, PIDV1_USER . ":" . PIDV1_PW);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $plugin->getSetting(0, 'pidv1_timeout'));
+        curl_setopt($ch, CURLOPT_USERPWD, $plugin->getSetting(0, 'pidv1_user') . ":" . $plugin->getSetting(0, 'pidv1_pw'));
         $result = curl_exec($ch);
         curl_close($ch);
         
@@ -405,19 +405,21 @@ class RpositoryDAO extends DAO{
         return (String)$out;
     }
     
-    function fetchPIDv2($articleId){
+    function fetchPIDv2(&$plugin, $articleId){
         $url = $this->getPackageName($articleId);
         if($url == ''){
             return NULL;
         }
-        $url = REPOSITORY_URL . $url;
+        $url = $plugin->getSetting(0, 'repository_url') . $url;
 
         $data = '[{"type":"URL","parsed_data":"' . $url . '"}]';
         $ch = curl_init();
+        //error_log("url: " . $url);
+        //error_log("pidv2_service_url: " . $plugin->getSetting(0, 'pidv2_service_url') . $plugin->getSetting(0, 'pidv2_prefix') );
         //set the url, number of POST vars, POST data
-        curl_setopt($ch,CURLOPT_URL, PIDV2_SERVICE_URL);
-        curl_setopt($ch,CURLOPT_USERPWD, PIDV2_USER .":".PIDV2_PW);
-        curl_setopt($ch, CURLOPT_TIMEOUT, PIDV2_TIMEOUT);
+        curl_setopt($ch,CURLOPT_URL, $plugin->getSetting(0, 'pidv2_service_url') . $plugin->getSetting(0, 'pidv2_prefix'));
+        curl_setopt($ch,CURLOPT_USERPWD, $plugin->getSetting(0, 'pidv2_user') .":".$plugin->getSetting(0, 'pidv2_pw'));
+        curl_setopt($ch, CURLOPT_TIMEOUT, $plugin->getSetting(0, 'pidv2_timeout'));
         curl_setopt($ch, CURLOPT_HTTPHEADER, array('Accept:application/json', 'Content-Type:application/json'));
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'POST');
         curl_setopt($ch,CURLOPT_RETURNTRANSFER, 1);
@@ -429,11 +431,12 @@ class RpositoryDAO extends DAO{
         //error_log(print_r($result, TRUE));
         $m = array();
         preg_match_all('/<dd><a href="([A-F0-9-]*)">/', $result, $m );
+        //error_log(print_r($m, TRUE));
         if($m[1] == ''){
             return NULL;
         }
         else{
-            return PIDV2_PREFIX . "/" . $m[1][0];
+            return $plugin->getSetting(0, 'pidv2_prefix'). "/" . $m[1][0];
         }
     }
     
@@ -445,36 +448,73 @@ class RpositoryDAO extends DAO{
         return $this->update("UPDATE rpository SET pidv2=? WHERE articleId=? AND current=1", array($pid, $article_id));        
     }
     
-    function updatePID($articleId){
-        /*
-       if (PIDV1_USER != "PIDv1_User" && PIDV1_PW != "PIDv1_Passwd"){
+    function updatePID(&$plugin, $articleId){
+        if($plugin->getSetting(0, 'pidstatus') == 0){
+            return TRUE;
+        }
+        
+        if($plugin->getSetting(0, 'pidstatus') == 1){
+            if($plugin->getSetting(0, 'pidv1_pw') == "" || $plugin->getSetting(0, 'pidv1_user') == ""){
+                error_log("PIDv1_User and PIDv1_Passwd need to be filled in.");
+                return FALSE;
+            }
+            //template has been filled with username & password
+            $pidv1 = $this->fetchPIDv1($plugin, $articleId);
+            if($pidv1 == NULL){
+                error_log("OJS - rpository: error fetching pidv1");
+                return FALSE;
+            }
+            else{
+                $this->updatePIDv1($articleId, $pidv1);
+            }
+        }
+        
+        if($plugin->getSetting(0, 'pidstatus') == 2){
+            if($plugin->getSetting(0, 'pidv2_pw') == "" || $plugin->getSetting(0, 'pidv2_user')== ""){
+                error_log("PIDv2_User and PIDv2_Passwd need to be filled in.");
+                return FALSE;
+            }
            //template has been filled with username & password
-           $pidv1 = $this->fetchPIDv1($articleId);
-       } else {
-           error_log("PIDv*_User and PIDv*_Passwd need to be filled in.")
-           $pidv1 = NULL;
-       }
-       //error_log("pidv1 response: " . print_r($pidv1, TRUE));
-       if($pidv1 == NULL){
-           error_log("OJS - rpository: error fetching pidv1");
-       }
-       else{
-           $this->updatePIDv1($articleId, $pidv1);
-       }
-       */
-       if (PIDV2_USER != "PIDv2_User" && PIDV2_PW != "PIDv2_Passwd"){
-           //template has been filled with username & password
-           $pidv2 = $this->fetchPIDv2($articleId);
-       } else {
-           error_log("PIDv*_User and PIDv*_Passwd need to be filled in.")
-           $pidv2 = NULL;
-       }
-       if($pidv2 == NULL){
-           error_log("OJS - rpository: error fetching pidv2");
-       }else{
-           $this->updatePIDv2($articleId, $pidv2);
-       }
-       return TRUE;
+           $pidv2 = $this->fetchPIDv2($plugin, $articleId);
+           if($pidv2 == NULL){
+               error_log("OJS - rpository: error fetching pidv2");
+               return FALSE;
+           }
+           else{
+               $this->updatePIDv2($articleId, $pidv2);
+           }
+        }
+        return TRUE;
+    }
+    
+    function getArticlesWithoutPid($pid_version){
+        switch($pid_version){
+            case 1:
+                $result = $this->retrieve("select article_id from published_articles JOIN rpository ON published_articles.article_id=rpository.articleId WHERE pidv1 IS NULL AND date_published IS NOT NULL", array());
+                $out_array=array();
+                while(!$result->EOF){
+                    $row = $result->GetRowAssoc(false);
+                    $out_array[] = $row['article_id'];
+                    $result->MoveNext();
+                }
+                $result->Close();
+                return $out_array;
+                break;
+            case 2:
+                $result = $this->retrieve("select article_id from published_articles JOIN rpository ON published_articles.article_id=rpository.articleId WHERE pidv2 IS NULL AND date_published IS NOT NULL", array());
+                $out_array=array();
+                while(!$result->EOF){
+                    $row = $result->GetRowAssoc(false);
+                    $out_array[] = $row['article_id'];
+                    $result->MoveNext();
+                }
+                $result->Close();
+                return $out_array;
+                break;
+            default:
+                return NULL;
+                break;
+        }
     }
 }
 ?>
