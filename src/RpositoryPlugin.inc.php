@@ -3,6 +3,8 @@ import('classes.plugins.GenericPlugin');
 import('classes.plugins.GenericPlugin');
 require_once('OJSPackager.php');
 require_once('RpositoryDAO.inc.php');
+require_once('PackedSupplFile.php');
+require_once('ZipSupplFile.php');
 
 
 class RpositoryPlugin extends GenericPlugin {    
@@ -106,7 +108,7 @@ class RpositoryPlugin extends GenericPlugin {
         }        
         
         $journal_id = $articledao->getArticleJournalId($articleId);        
-        $packager = new OJSPackager(Config::getVar('files', 'files_dir') . '/journals/' . $journal_id . '/articles');
+        $packager = new OJSPackager(Config::getVar('files', 'files_dir') . '/journals/' . $journal_id . '/articles', new ZipSupplFile());
         
         // create the new package for $articleId
         $archive = $packager->writePackage($articleId);

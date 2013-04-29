@@ -2,17 +2,20 @@
 require_once('PackageDescription.php');
 require_once('Tar.php');
 require_once('descr_escape.php');
+require_once('PackedSupplFile.php');
 
 
 class OJSPackager{
     private $filesPath;
     private $rpositorydao;
+    private $unpacker;
     
     // constructor
-    public function __construct($filesPath){        
+    public function __construct($filesPath, PackedSupplFile $unpacker){
         $this->filesPath    = $filesPath;
         $daos               =& DAORegistry::getDAOs();
         $this->rpositorydao =& $daos['RpositoryDAO'];
+	$this->unpacker =& $unpacker;
     }
     
     // returns true if $str begins with $sub
@@ -30,6 +33,13 @@ class OJSPackager{
             $random .= substr($char_list,(rand()%(strlen($char_list))), 1);  
         }  
         return $random;
+    }
+
+    private function tmpDir() {
+	$randomDirName = 'rpo-' . $this->randomStringGen(20);
+        mkdir(sys_get_temp_dir() . '/' . $randomDirName);
+        $tempDir = sys_get_temp_dir() . '/' . $randomDirName;
+	return $tempDir;
     }
     
     // removes $dir recursively
@@ -113,9 +123,7 @@ class OJSPackager{
         $pd->set("License", "CC BY-NC (http://creativecommons.org/licenses/by-nc/3.0/de/)");
         
         // create a directory under the system temp dir for and copy the article and its supplementary files to there
-        $randomDirName = 'rpo-' . $this->randomStringGen(20);
-        mkdir(sys_get_temp_dir() . '/' . $randomDirName);
-        $tempDir = sys_get_temp_dir() . '/' . $randomDirName;
+        $tempDir = $this->tmpDir();
 
 	//$pdfile = $pdfile;
 	//error_log("OJS - Rpository: ". $pdfile);
@@ -123,18 +131,37 @@ class OJSPackager{
         $pw = new Archive_Tar($archive, 'gz');
         $result_fileStmt = $this->rpositorydao->getFileStatement($article_id);
         $submissionPreprintName = '';
+
+	$suppCount = 0;
+	foreach($result_fileStmt as $row_fileStmt) {
+	    if($row_fileStmt['type'] == 'supp') {
+		$suppCount++;
+	    }
+	}
+
         foreach($result_fileStmt as $row_fileStmt){
             $name       = $row_fileStmt['file_name'];
             $origName   = $row_fileStmt['original_file_name'];
             $type       = $row_fileStmt['type'];
         
-            if($type == 'supp'){
-                if(!is_dir($tempDir . '/' . 'inst')){
-                    mkdir($tempDir . '/' . 'inst', 0777, TRUE);
-                }
-                if(!copy($suppPath . $name, trim($tempDir) . '/' . 'inst' . '/' . $origName)){
-                    error_log('OJS - rpository: error copying file: ' .$suppPath . $name . ' to: ' . trim($tempDir . '/' . 'inst' . '/' . $origName));
-                }
+            if($type == 'supp' ){
+		if ($suppCount != 1 || !$this->unpacker->canHandle($suppPath . $name)) {
+		    if(!is_dir($tempDir . '/' . 'inst')){
+			mkdir($tempDir . '/' . 'inst', 0777, TRUE);
+		    }
+		    if(!copy($suppPath . $name, trim($tempDir) . '/' . 'inst' . '/' . $origName)){
+		        error_log('OJS - rpository: error copying file: ' .$suppPath . $name . ' to: ' . trim($tempDir . '/' . 'inst' . '/' . $origName));
+		    }
+		} elseif ($this->unpacker->canHandle($suppPath . $name)) {
+		    if(!is_dir($tempDir . '/' . 'inst')){       
+			mkdir($tempDir . '/' . 'inst', 0777, TRUE);
+		    }
+		    $unpackDir = $this->tmpDir();
+		    $this->unpacker->unpackInto($suppPath . $name, $unpackDir);
+		    $contentDir = get_content_dir($unpackDir);
+		    move_dir_contents($contentDir, $tempDir . '/' . 'inst');
+		    $this->deleteDirectory($unpackDir);
+		}
             }
             elseif($type == 'submission/original'){
                 // TODO: pdf name wird nicht ermittelt // verzeichnisstruktur weicht von java version ab
