@@ -137,11 +137,11 @@ class RpositoryDAO extends DAO{
     function articleIsPublished($articleId){
         $result =& $this->retrieve("SELECT * FROM published_articles "
                 ."WHERE article_id = ?", array($articleId));
-        if($result->EOF){
+        $row = $result->GetRowAssoc(false);
+        if($row == NULL){
             return FALSE;
         }
         else{
-            $row = $result->GetRowAssoc(false);
             if($row['date_published'] != NULL){
                 return TRUE;
             }
