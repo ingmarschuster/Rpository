@@ -166,13 +166,21 @@ class OJSPackager{
             elseif($type == 'submission/original'){
                 // TODO: pdf name wird nicht ermittelt // verzeichnisstruktur weicht von java version ab
                 $submissionPreprintName = $origName;
-                
-                copy($this->filesPath   . "/" . $article_id . "/submission/original/". $name, trim($tempDir) . '/' . 'inst' . '/' . 'PREPRINT - ' . $submissionPreprintName);
+
+                if(!is_dir($tempDir . '/' . 'inst' . '/' . 'preprint')){
+                    mkdir($tempDir . '/' . 'inst' . '/' . 'preprint', 0777, TRUE);
+                    }
+
+                copy($this->filesPath   . "/" . $article_id . "/submission/original/" . $name, trim($tempDir) . '/' . 'inst' . '/' . 'preprint' . '/' . $submissionPreprintName);
             }
             elseif($type == 'public'){
                 $submissionPreprintName = $origName;
                 
-                copy($preprPath . $name, trim($tempDir) . '/' . 'inst' . '/' . 'PREPRINT - ' . $submissionPreprintName);
+                if(!is_dir($tempDir . '/' . 'inst' . '/' . 'preprint')){
+                                        mkdir($tempDir . '/' . 'inst' . '/' . 'preprint', 0777, TRUE);
+                                       }
+
+                copy($preprPath . $name, trim($tempDir) . '/' . 'inst' . '/' . 'preprint' . '/' . $submissionPreprintName);
             }
         }
         // create the archive with the temp directory we created above
