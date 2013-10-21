@@ -22,12 +22,12 @@ plugin_name=`get_tag_content application "$versionfile"`
 plugin_release=`get_tag_content release "$versionfile"`
 
 
-if [ ! -d `dirname $0`/build/ ]; then
-    mkdir -p `dirname $0`/build/ > /dev/null 2>&1
+if [ ! -d `dirname $0`/releases/ ]; then
+    mkdir -p `dirname $0`/releases/ > /dev/null 2>&1
     if [ $? -ne 0 ]; then
-        echo "Could not create 'build/' directory" 1>&2
+        echo "Could not create 'releases/' directory" 1>&2
         exit 1
     fi
 fi
 
-gnutar --xform="s|^$srcdir|$plugin_name|g" --xform="s|\.template$||g" -czf `dirname $0`/build/"$plugin_name-$plugin_release.tar.gz" "$srcdir"
+gnutar --xform="s|^$srcdir|$plugin_name|g" --xform="s|\.template$||g" -czf `dirname $0`/releases/"$plugin_name-$plugin_release.tar.gz" "$srcdir"
