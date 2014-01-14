@@ -1,5 +1,4 @@
 <?php
-import('classes.plugins.GenericPlugin'); 
 import('classes.plugins.GenericPlugin');
 require_once('OJSPackager.php');
 require_once('RpositoryDAO.inc.php');
@@ -170,7 +169,6 @@ class RpositoryPlugin extends GenericPlugin {
                     $form->readInputData();
                     if($form->validate()){
                         $form->execute();
-          include 'RpositoryPlugin.inc.php';
                         Request::redirect(null, 'manager', 'plugin');
                         return false;
                     }
