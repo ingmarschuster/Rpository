@@ -22,6 +22,18 @@
         <value>/var/www/Rpository/src/contrib/</value>
     </setting>
     <setting type="string">
+        <name>path</name>
+        <value>www</value>
+    </setting>
+    <setting type="string">
+        <name>hostname</name>
+        <value>google</value>
+    </setting>
+    <setting type="string">
+        <name>documentroot</name>
+        <value>de</value>
+    </setting>
+    <setting type="string">
         <name>repository_url</name>
         <value>http://asvsp.informatik.uni-leipzig.de/Rpository/src/contrib/</value>
     </setting>
@@ -51,7 +63,7 @@
     </setting>
     <setting type="int">
         <name>pidv2_timeout</name>
-        <value>20</value>
+        <value>200</value>
     </setting>
     <setting type="string">
         <name>pidv2_user</name>

@@ -43,8 +43,11 @@ class RpositoryPluginSettingsForm extends Form{
         $plugin =& $this->plugin;
 
         $pidstatus = $plugin->getSetting(0, 'pidstatus');
-        $output_path = $plugin->getSetting(0, 'output_path');
-        $repository_url = $plugin->getSetting(0, 'repository_url');
+        $output_path = $plugin->getSetting(0, 'documentroot') . $plugin->getSetting(0,'path');
+		$path = $plugin->getSetting(0, 'path');
+		$hostname = $plugin->getSetting(0, 'hostname');
+		$documentroot = $plugin->getSetting(0, 'documentroot');
+        $repository_url = $plugin->getSetting(0, 'hostname') . "/" . $plugin->getSetting(0,'path');
         $pidv1_user = $plugin->getSetting(0, 'pidv1_user');
         $pidv1_pw = $plugin->getSetting(0, 'pidv1_pw');
         $pidv1_service_url = $plugin->getSetting(0, 'pidv1_service_url');
@@ -63,6 +66,9 @@ class RpositoryPluginSettingsForm extends Form{
         $this->_data = array(
             'pidstatus' => $pidstatus,
             'output_path' => $output_path,
+			'path' => $path,
+			'hostname' => $hostname,
+			'documentroot' => $documentroot,
             'repository_url' => $repository_url,
             'pidv1_user' => $pidv1_user,
             'pidv1_pw' => $pidv1_pw,
@@ -82,7 +88,7 @@ class RpositoryPluginSettingsForm extends Form{
      * Assign form data to user-submitted data.
      */
     function readInputData() {
-        $this->readUserVars(array('pidstatus', 'output_path', 'repository_url',
+        $this->readUserVars(array('pidstatus', 'path', 'hostname', 'documentroot',
             'pidv1_user', 'pidv1_pw', 'pidv1_service_url', 'pidv1_timeout',
             'pidv2_user', 'pidv2_pw', 'pidv2_service_url', 'pidv2_timeout',
             'pidv2_prefix', 'fetch_missing_pids_v1', 'fetch_missing_pids_v2'));
@@ -95,12 +101,18 @@ class RpositoryPluginSettingsForm extends Form{
         $plugin =& $this->plugin;
 
         $newPidStatus = trim($this->getData('pidstatus'));
-        $newOutputPath= trim($this->getData('output_path'));
-        $newRepositoryUrl = trim($this->getData('repository_url'));
+        $newOutputPath= trim($this->getData('documentroot').$this->getData('path'));
+		$newPath= trim($this->getData('path'));
+		$newHostname= trim($this->getData('hostname'));
+		$newDocumentroot= trim($this->getData('documentroot'));
+        $newRepositoryUrl = trim($this->getData('hostname') . "/" . $this->getData('path'));
 
         $plugin->updateSetting(0, 'pidstatus', $newPidStatus, 'int');
         $plugin->updateSetting(0, 'output_path', $newOutputPath, 'string');
-        $plugin->updateSetting(0, 'repository_url', $newRepositoryUrl, 'string');
+		$plugin->updateSetting(0, 'path', $newPath, 'string');
+		$plugin->updateSetting(0, 'hostname', $newHostname, 'string');
+		$plugin->updateSetting(0, 'documentroot', $newDocumentroot, 'string');
+	    $plugin->updateSetting(0, 'repository_url', $newRepositoryUrl, 'string');
 
         if($newPidStatus == 1){
             $newPidV1User = trim($this->getData('pidv1_user'));
@@ -140,7 +152,7 @@ class RpositoryPluginSettingsForm extends Form{
                 $rpositorydao   =& $daos['RpositoryDAO'];
                 $pids_to_fetch = $rpositorydao->getArticlesWithoutPid(2);
                 foreach($pids_to_fetch as $articleId){
-                    $rpositorydao->updatePID($this->plugin, $articleId);
+                    $rpositorydao->test($articleId);
                 }
             }
         }

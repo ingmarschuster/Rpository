@@ -12,7 +12,7 @@ class OJSPackager{
     
     // constructor
     public function __construct($filesPath, PackedSupplFile $unpacker){
-        $this->filesPath    = $filesPath;
+        $this->filesPath    = $filesPath;//hostname+rpositorypath
         $daos               =& DAORegistry::getDAOs();
         $this->rpositorydao =& $daos['RpositoryDAO'];
 	$this->unpacker =& $unpacker;

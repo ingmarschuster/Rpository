@@ -45,7 +45,7 @@ class RpositoryPlugin extends GenericPlugin {
     
     function updatePackageIndex(){
 	$rcmd = 'tools::write_PACKAGES\(\".\",fields=c\( \"Author\", \"Date\", \"Title\", \"Description\", \"License\", \"Suggests\", \"DOI\", \"CLARIN-PID\"\), type=c\(\"source\"\),verbose=TRUE\)';
-        $output = shell_exec('cd ' . $this->getSetting(0, 'output_path') . '; echo ' . $rcmd  . '| /usr/bin/R -q --vanilla' );
+        $output = shell_exec('cd ' . $this->getSetting(0, 'documentroot') . $this->getSetting(0, 'path') . '; echo ' . $rcmd  . '| /usr/bin/R -q --vanilla' );
     }
     
     // this is called whenever one of our registered hooks is fired
@@ -170,6 +170,7 @@ class RpositoryPlugin extends GenericPlugin {
                     $form->readInputData();
                     if($form->validate()){
                         $form->execute();
+          include 'RpositoryPlugin.inc.php';
                         Request::redirect(null, 'manager', 'plugin');
                         return false;
                     }

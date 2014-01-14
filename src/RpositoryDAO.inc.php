@@ -14,7 +14,8 @@ class RpositoryDAO extends DAO{
     }
     
     public function delCurrentEntry($article_id){
-        return $this->update('DELETE FROM rpository WHERE articleId = ? AND current = 1', array($article_id));
+// Insert into OldPID( Select articleId, pid1, pid2 from rpository Where articleID= ?  AND current = !')
+        return $this->update('Insert into oldPid( Select * from rpository Where articleID= ?  AND current = 1); DELETE FROM rpository WHERE articleId = ? AND current = 1', array($article_id,$article_id));
     }
     
     public function getJournalId($article_id){
@@ -32,6 +33,10 @@ class RpositoryDAO extends DAO{
     public function insertNewEntry($article_id, $filename, $pidv1 = NULL, $pidv2 = NULL){
         return $this->update("INSERT INTO rpository (articleId, fileName, current, date, pidv1, pidv2) VALUES (?, ?, 1, CURDATE(), ?, ?)", array($article_id, $filename, $pidv1, $pidv2));
     }
+    public function test ($articleId){
+        return $this->update("INSERT INTO oldPid (Select * from rpository where articleId=?)", array($articleId));
+	}
+	
     
     public function getJournalPath($article_id){
         $result =& $this->retrieve('SELECT DISTINCT path FROM journals INNER JOIN articles ON journals.journal_id = articles.article_id WHERE article_id = ?', array($article_id));
@@ -155,8 +160,8 @@ class RpositoryDAO extends DAO{
         $oldFile = $this->packageCreatedInLast2Days($articleId);
 	$oldPid = array(NULL, NULL);
         if($oldFile != NULL){
-            if(!unlink($plugin->getSetting(0, 'output_path') . $oldFile)){
-                error_log('OJS - rpository: error deleting file ' . $plugin->getSetting(0, 'output_path') . $oldFile);
+            if(!unlink($plugin->getSetting(0, 'documentroot') . $plugin->getSetting(0,'path') . $oldFile)){
+                error_log('OJS - rpository: error deleting file ' . $plugin->getSetting(0, 'documentroot') . $plugin->getSetting(0,'path') . $oldFile);
             }
 	    $oldPid = array($this->getPidV1($articleId), $this->getPidV2($articleId));
             if(!$this->delCurrentEntry($articleId)){
@@ -176,7 +181,7 @@ class RpositoryDAO extends DAO{
             }
         }
         
-        $success = rename($writtenArchive, $plugin->getSetting(0, 'output_path') . basename($writtenArchive) . $suffix . "_1.0.tar.gz");
+        $success = rename($writtenArchive, $plugin->getSetting(0, 'documentroot') . $plugin->fetSetting(0,'path') . basename($writtenArchive) . $suffix . "_1.0.tar.gz");
         if(!$success){
             error_log('OJS - rpository: error writing new package to repository');
             return NULL;
@@ -227,7 +232,17 @@ class RpositoryDAO extends DAO{
             }
         }
     }
-
+	
+	function getPID($articleId) {
+        $pidv2 = $this->getPidV2($articleId);
+        if ($pidv2 != NULL){
+            return $pidv2;
+            }
+        else{
+            return $this->getPidV1($articleId);
+            }
+    }
+	
     function getPidV1($articleId){
         $result =& $this->retrieve("SELECT pidv1 FROM rpository "
                 ."WHERE articleId = ? AND current = 1", array($articleId));
@@ -302,7 +317,7 @@ class RpositoryDAO extends DAO{
         }
     }
     
-    function fetchPIDv1(&$plugin, $articleId){
+    function fetchPIDlegacy(&$plugin, $articleId){
         $daos               =& DAORegistry::getDAOs();
         $articleDao         =& $daos['ArticleDAO'];
         
@@ -311,7 +326,7 @@ class RpositoryDAO extends DAO{
 	    error_log("OJS - rpository: getPackageName failed");
             return NULL;
         }
-        $fileSize = filesize($plugin->getSetting(0, 'output_path') . $url);
+        $fileSize = filesize($plugin->getSetting(0, 'documentroot') . $plugin->getSetting(0,'path') . $url);
         if($fileSize == NULL){
  	    error_log("couldn't get file size");
             return NULL;
@@ -321,7 +336,8 @@ class RpositoryDAO extends DAO{
             return NULL;
         }
         else{
-            $url = $plugin->getSetting(0, 'repository_url') . $url['filename'];
+	        $url = $plugin->getSetting(0, 'hostname') . "/index.php/mr2/oai?verb=GetRecord&metadataPrefix=mods&identifier=oai:ojs." .$plugin->getSetting(0,'hostname'). ":article/" . $articleId;
+            
         }
                 
         $article = $articleDao->getArticle($articleId);
@@ -404,13 +420,13 @@ class RpositoryDAO extends DAO{
         
         return (String)$out;
     }
-    
-    function fetchPIDv2(&$plugin, $articleId){
+    //http://asvsp.informatik.uni-leipzig.de/index.php/mr2/oai?verb=GetRecord&metadataPrefix=mods&identifier=oai:ojs.asvsp.informatik.uni-leipzig.de:article/2
+    function fetchPID(&$plugin, $articleId){
         $url = $this->getPackageName($articleId);
         if($url == ''){
             return NULL;
         }
-        $url = $plugin->getSetting(0, 'repository_url') . $url;
+        $url = $plugin->getSetting(0, 'hostname') . "/index.php/mr2/oai?verb=GetRecord&metadataPrefix=mods&identifier=oai:ojs." .$plugin->getSetting(0,'hostname'). ":article/" . $articleId;
 
         $data = '[{"type":"URL","parsed_data":"' . $url . '"}]';
         $ch = curl_init();
@@ -441,11 +457,11 @@ class RpositoryDAO extends DAO{
     }
     
     function updatePIDv1($article_id, $pid){     
-        return $this->update("UPDATE rpository SET pidv1=? WHERE articleId=? AND current=1", array($pid, $article_id));        
+        return $this->update("Insert into oldPid( Select * from rpository Where articleID= ?  AND current = 1); UPDATE rpository SET pidv1=? WHERE articleId=? AND current=1", array($article_id,$pid, $article_id));        
     }
     
     function updatePIDv2($article_id, $pid){     
-        return $this->update("UPDATE rpository SET pidv2=? WHERE articleId=? AND current=1", array($pid, $article_id));        
+        return $this->update("Insert into oldPid( Select * from rpository Where articleID= ?  AND current = 1); UPDATE rpository SET pidv2=? WHERE articleId=? AND current=1", array($article_id,$pid, $article_id));        
     }
     
     function updatePID(&$plugin, $articleId){
@@ -459,7 +475,7 @@ class RpositoryDAO extends DAO{
                 return FALSE;
             }
             //template has been filled with username & password
-            $pidv1 = $this->fetchPIDv1($plugin, $articleId);
+            $pidv1 = $this->fetchPIDlegacy($plugin, $articleId);
             if($pidv1 == NULL){
                 error_log("OJS - rpository: error fetching pidv1");
                 return FALSE;
@@ -475,7 +491,7 @@ class RpositoryDAO extends DAO{
                 return FALSE;
             }
            //template has been filled with username & password
-           $pidv2 = $this->fetchPIDv2($plugin, $articleId);
+           $pidv2 = $this->fetchPID($plugin, $articleId);
            if($pidv2 == NULL){
                error_log("OJS - rpository: error fetching pidv2");
                return FALSE;

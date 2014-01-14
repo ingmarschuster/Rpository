@@ -35,33 +35,40 @@ function editVis(value){
     <div id="description">{translate key="plugins.generic.rpository.settings.description"}</div>
     <div class="separator"></div>
     <br/>
-
     <form method="post" action="{plugin_url path="settings"}">
         {include file="common/formErrors.tpl"}
         <table width="100%" class="data">
-            <tr>
-                <td align="right" width="10%" class="label">{translate key="plugins.generic.rpository.settings.outputpath"}{fieldLabel name="output_path" }</td>
+            <tr valign="top">
+                <td align="right" width="10%" class="label">{translate key="plugins.generic.rpository.settings.path"}{fieldLabel name="path"}</td>
                 <td width="40%" class="value">
-                    <input type=text name="output_path" value={$output_path}>
+                    <input type=text name="path" value={$path}> 
                     <br/>
                 </td>
             </tr>
             <tr valign="top">
-                <td align="right" width="10%" class="label">{fieldLabel name="repository_url" }{translate key="plugins.generic.rpository.settings.repositoryurl"}</td>
+                <td align="right" width="10%" class="label">{fieldLabel name="hostname" }{translate key="plugins.generic.rpository.settings.hostname"}</td>
                 <td width="40%" class="value">
-                    <input type=text name="repository_url" value={$repository_url}> 
+                    <input type=text name="hostname" value={$hostname}> 
                     <br/>
                 </td>
             </tr>
+            <tr valign="top">
+                <td align="right" width="10%" class="label">{fieldLabel name="documentroot" }{translate key="plugins.generic.rpository.settings.documentroot"}</td>
+                <td width="40%" class="value">
+                    <input type=text name="documentroot" value={$documentroot}> 
+                    <br/>
+                </td>
+			</tr>
             <tr valign="top">
                 <td align="right" width="10%" class="label">{translate key="plugins.generic.rpository.settings.pidselect"}{fieldLabel name="pidselect" }</td>
                 <td align="left" width="40%" class="value">
-                    <select name="pidstatus" size="1" class="selectMenu" onChange='editVis(this.value)' value={$pidstatus}>
+                 
+			 <select name="pidstatus" size="1" class="selectMenu" onChange='editVis(this.value)' value={$pidstatus}>
                         <option label="disabled" value="0" {if $pidstatus eq 0}  selected {/if}>PID disabled</option>
-                        <option label="enabledPidv1" value="1" {if $pidstatus eq 1} selected {/if}>{translate key="plugins.generic.rpository.settings.pidusev1"}</option>
-                        <option label="enabledPidv2" value="2" {if $pidstatus eq 2} selected {/if}>{translate key="plugins.generic.rpository.settings.pidusev2"}</option>
+                       
+                        <option label="enabled" value="2" {if $pidstatus eq 2} selected {/if}>{translate key="plugins.generic.rpository.settings.pidusev2"}</option>
                     </select>
-                </td>
+                   
             </tr>
         </table>
         <br/>
